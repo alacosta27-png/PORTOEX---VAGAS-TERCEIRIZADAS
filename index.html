@@ -363,6 +363,9 @@ body {
   letter-spacing: 0.3px;
 }
 .badge-navy { background: var(--navy); color: var(--yellow); }
+.badge-func-interno { background: var(--yellow-soft); color: var(--navy); border: 1px solid var(--yellow-dark); font-weight: 700; }
+.badge-func-externo { background: var(--navy); color: var(--yellow); }
+.badge-func-conferente { background: var(--info-bg); color: var(--info); }
 .badge-yellow { background: var(--yellow-soft); color: var(--warning); }
 .badge-success { background: var(--success-bg); color: var(--success); }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
@@ -763,7 +766,7 @@ tbody tr:hover { background: var(--gray-50); }
       <div id="col-manual" class="inner-page active">
         <div class="card">
           <div class="card-title">Novo Colaborador</div>
-          <div class="form-grid">
+          <div class="form-grid" style="grid-template-columns:1fr 2fr">
             <div class="form-group">
               <label>CPF / RG *</label>
               <input type="text" id="col-cpf" placeholder="000.000.000-00" oninput="checkColaborador()">
@@ -771,12 +774,6 @@ tbody tr:hover { background: var(--gray-50); }
             <div class="form-group">
               <label>Nome *</label>
               <input type="text" id="col-nome" placeholder="Nome completo">
-            </div>
-            <div class="form-group">
-              <label>Tipo de Operação</label>
-              <select id="col-operacao">
-                <option value="">Selecione...</option>
-              </select>
             </div>
           </div>
           <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--warning-bg); border-radius:var(--radius); font-size:12px; color:var(--warning);">
@@ -938,6 +935,9 @@ tbody tr:hover { background: var(--gray-50); }
           </div>
           <div>
             <button class="btn btn-yellow" onclick="exportarAcertoCSV()">⬇ CSV</button>
+          </div>
+          <div>
+            <button class="btn btn-ghost" style="border-color:var(--danger);color:var(--danger)" onclick="exportarAcertoPDF()">📄 PDF</button>
           </div>
         </div>
         <div style="font-size:11px;color:var(--gray-400);margin-top:8px">💡 Padrão quinzenal (1–15 e 16–fim), mas qualquer intervalo é aceito.</div>
@@ -1103,16 +1103,17 @@ tbody tr:hover { background: var(--gray-50); }
               <tr>
                 <th style="width:32px">#</th>
                 <th>Operação — Função automática</th>
-                <th style="width:100px">Função</th>
+                <th style="width:110px">Função</th>
                 <th style="width:65px">Qtd</th>
                 <th style="width:110px">Hora Inicial</th>
+                <th>Motorista <span style="font-weight:400;color:var(--gray-400);font-size:10px">(só ROTA)</span></th>
                 <th style="width:36px"></th>
               </tr>
             </thead>
             <tbody id="vaga-linhas-body"></tbody>
           </table>
         </div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">Deixar Qtd = 0 oculta a linha no mural.</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">ROTA: cadastrado 1 por linha. Outros: use Qtd para múltiplos.</div>
       </div>
       <div class="form-group" style="margin-top:14px;">
         <label>Observações gerais</label>
@@ -1247,6 +1248,12 @@ tbody tr:hover { background: var(--gray-50); }
             <label>Número da MD</label>
             <input type="text" id="ae-md" placeholder="Ex: 12345">
           </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px">
+        <div class="form-group">
+          <label>🔐 Senha Admin para confirmar alteração *</label>
+          <input type="password" id="ae-senha-confirm" placeholder="Digite a senha do administrador">
         </div>
       </div>
     </div>
@@ -1436,9 +1443,13 @@ let editVagaId = null;
 let currentAtribuirVagaId = null;
 let currentAcompId = null;
 
-// Admin fixo (pode ser movido para Firebase futuramente)
-const ADMIN_LOGIN = 'portoex.admin';
+// Admin logins — a senha ADMIN_SENHA é a master (usada para ações sensíveis)
 const ADMIN_SENHA = 'admin@2024';
+const ADMIN_LOGINS = [
+  { login: 'portoex.admin',        senha: 'admin@2024',   role: 'admin', label: '🔑 Administrador' },
+  { login: 'portoex.controladoria', senha: 'ctrl@2024',   role: 'admin', label: '📊 Controladoria' },
+  { login: 'portoex.logistica',     senha: 'log@2024',    role: 'admin', label: '🚚 Logística' },
+];
 
 // ===================== OPERAÇÕES PADRÃO =====================
 // Mapa fixo: operação → função automática
@@ -1456,6 +1467,15 @@ const OP_FUNCAO_MAP = {
 
 function getFuncaoByOp(opNome) {
   return OP_FUNCAO_MAP[opNome] || 'Ajudante Externo';
+}
+
+function funcaoBadge(funcao) {
+  if (!funcao) return 'badge-navy';
+  const f = funcao.toLowerCase();
+  if (f.includes('interno')) return 'badge-func-interno';
+  if (f.includes('externo')) return 'badge-func-externo';
+  if (f.includes('conferente')) return 'badge-func-conferente';
+  return 'badge-navy';
 }
 
 const OPERACOES_PADRAO = [
@@ -1486,8 +1506,10 @@ function doLogin() {
     localStorage.removeItem('px_pass');
   }
 
-  if (user === ADMIN_LOGIN && pass === ADMIN_SENHA) {
-    currentUser = { role: 'admin', login: user };
+  // Verificar logins admin
+  const adminMatch = ADMIN_LOGINS.find(a => a.login === user && a.senha === pass);
+  if (adminMatch) {
+    currentUser = { role: 'admin', login: user, label: adminMatch.label };
     initApp();
     return;
   }
@@ -1535,7 +1557,7 @@ function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-layout').style.display = 'flex';
   document.getElementById('header-user').textContent =
-    currentUser.role === 'admin' ? '🔑 Administrador' : ('🏢 ' + currentUser.empresaNome);
+    currentUser.role === 'admin' ? (currentUser.label || '🔑 Administrador') : ('🏢 ' + currentUser.empresaNome);
 
   buildNavTabs();
   listenFirebase();
@@ -1973,24 +1995,35 @@ function renderVagaLinhas() {
     const funcao = op.funcao || getFuncaoByOp(op.nome);
     return `<option value="${id}">${op.nome} — ${funcao}</option>`;
   }).join('');
+  const motOpts = '<option value="">— Motorista —</option>' + Object.entries(STATE.motoristas || {})
+    .filter(([,m]) => m.status === 'ativo')
+    .map(([id,m]) => `<option value="${id}">${m.nome}${m.ident?' — '+m.ident:''}</option>`).join('');
+
   tbody.innerHTML = vagaLinhas.map((l, i) => {
     const li = vagaLinhas.indexOf(l);
-    // Derivar função do select atual
     const opAtual = l.opId ? (STATE.operacoes[l.opId] || {}) : {};
     const funcaoLabel = opAtual.funcao || (opAtual.nome ? getFuncaoByOp(opAtual.nome) : '');
+    const isRota = opAtual.cc === 'ROTA' || opAtual.nome === 'ROTA';
+    const qtdCell = isRota
+      ? `<td style="text-align:center;font-size:11px;color:var(--gray-400);padding:0 8px">1</td>`
+      : `<td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>`;
+    const motCell = isRota
+      ? `<td><select style="width:100%;padding:6px 8px;border:1px solid var(--yellow);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;background:var(--yellow-soft)" onchange="vagaLinhas[${li}].motoristaId=this.value;vagaLinhas[${li}].motoristaNome=this.options[this.selectedIndex].text">${motOpts.replace(`value="${l.motoristaId||''}"`,`value="${l.motoristaId||''}" selected`)}</select></td>`
+      : `<td style="text-align:center;color:var(--gray-200);font-size:11px">—</td>`;
     return `<tr>
       <td style="color:var(--gray-400);font-size:12px;text-align:center">${i+1}</td>
       <td>
         <select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px"
-          onchange="vagaLinhas[${li}].opId=this.value; renderVagaLinhas()">
+          onchange="vagaLinhas[${li}].opId=this.value;vagaLinhas[${li}].qtd=1;renderVagaLinhas()">
           ${opOpts.replace(`value="${l.opId}"`, `value="${l.opId}" selected`)}
         </select>
       </td>
       <td style="font-size:12px;font-weight:500;color:var(--navy);white-space:nowrap;padding:0 10px">
-        ${funcaoLabel ? `<span class="badge badge-navy" style="font-size:10px">${funcaoLabel}</span>` : '<span style="color:var(--gray-400)">—</span>'}
+        ${funcaoLabel ? `<span class="badge ${funcaoBadge(funcaoLabel)}" style="font-size:10px">${funcaoLabel}</span>` : '<span style="color:var(--gray-400)">—</span>'}
       </td>
-      <td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>
+      ${qtdCell}
       <td><input type="time" value="${l.hora||''}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].hora=this.value"></td>
+      ${motCell}
       <td><button class="btn btn-danger btn-sm" onclick="removeVagaLinha(${l.idx})" style="padding:4px 8px">✕</button></td>
     </tr>`;
   }).join('');
@@ -1999,25 +2032,25 @@ function renderVagaLinhas() {
 function saveVaga() {
   const data = v('vaga-data');
   if (!data) { toast('Informe a data de trabalho.', 'error'); return; }
-  const rows = document.querySelectorAll('#vaga-linhas-body tr');
   const linhas = [];
-  rows.forEach(row => {
-    const sel = row.querySelector('select');
-    const inps = row.querySelectorAll('input');
-    const opId = sel ? sel.value : '';
-    const qtd = inps[0] ? parseInt(inps[0].value)||0 : 0;
-    const hora = inps[1] ? inps[1].value : '';
-    if (opId && qtd > 0) {
-      const op = STATE.operacoes[opId] || {};
-      const funcao = op.funcao || getFuncaoByOp(op.nome);
-      linhas.push({ opId, opNome: op.nome, opCC: op.cc, funcao, qtd, hora, atribuicoes: {} });
+  vagaLinhas.forEach(l => {
+    if (!l.opId) return;
+    const op = STATE.operacoes[l.opId] || {};
+    const funcao = op.funcao || getFuncaoByOp(op.nome);
+    const isRota = op.cc === 'ROTA' || op.nome === 'ROTA';
+    const qtd = isRota ? 1 : (parseInt(l.qtd) || 0);
+    if (qtd <= 0) return;
+    const linha = { opId: l.opId, opNome: op.nome, opCC: op.cc, funcao, qtd, hora: l.hora||'', atribuicoes: {} };
+    if (isRota && l.motoristaId) {
+      linha.motoristaId = l.motoristaId;
+      linha.motoristaNome = l.motoristaNome || '';
     }
+    linhas.push(linha);
   });
-  if (!linhas.length) { toast('Preencha ao menos uma linha com operação e quantidade > 0.', 'error'); return; }
+  if (!linhas.length) { toast('Preencha ao menos uma linha com operação válida.', 'error'); return; }
   const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
   const payload = {
-    data,
-    linhas,
+    data, linhas,
     empresasAlvo: empsSel.length ? empsSel : null,
     obs: v('vaga-obs'),
     status: 'aberta',
@@ -2187,7 +2220,7 @@ function openAtribuir(vagaId) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <div style="background:var(--navy);color:var(--yellow);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">${linha.opNome}</div>
         <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
-        <span class="badge badge-navy" style="font-size:10px">${linha.funcao}</span>
+        <span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${linha.funcao}</span>
         ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
         <span id="counter-${li}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
       </div>
@@ -2450,7 +2483,7 @@ function renderAcompRow(id, a) {
     <td class="td-name">${a.colNome} ${desacordoCell}</td>
     <td style="font-size:12px">${a.empresaNome||'—'}</td>
     <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
-    <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
     <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
     <td>${a.chegada||'—'}</td>
     <td>${a.refeicao||'—'}</td>
@@ -2807,6 +2840,9 @@ function updateAcompPreview() {
 }
 
 function saveAcompEdit() {
+  const senhaDigitada = v('ae-senha-confirm');
+  if (senhaDigitada !== ADMIN_SENHA) { toast('Senha incorreta. Alteração não autorizada.', 'error'); return; }
+  sv('ae-senha-confirm', '');
   const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
   const a = STATE.acompanhamento[currentAcompId] || {};
   const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
@@ -2948,7 +2984,7 @@ function renderResumoAdmin() {
         <td class="td-name">${a.colNome}</td>
         <td style="font-size:12px">${a.empresaNome||'—'}</td>
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
-        <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
         <td>${a.chegada||'—'}</td>
         <td>${a.saida||'—'}</td>
         <td>${a.refeicao||'—'}</td>
@@ -3043,7 +3079,7 @@ function gerarAcerto() {
         <td class="td-name">${a.colNome}</td>
         <td class="td-mono">${a.colCPF||'—'}</td>
         <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
-        <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
         <td>${a.chegada||'—'}</td>
         <td>${a.saida||'—'}</td>
         <td>${a.refeicao||'—'}</td>
@@ -3103,7 +3139,89 @@ function exportarAcertoCSV() {
   a2.click();
 }
 
-// ===================== ZERAR PONTO =====================
+function exportarAcertoPDF() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+
+  // Agrupa por empresa
+  const porEmpresa = {};
+  acertoDados.forEach(([,a]) => {
+    const eid = a.empresaId || '_sem';
+    if (!porEmpresa[eid]) porEmpresa[eid] = { nome: a.empresaNome||'—', rows: [] };
+    porEmpresa[eid].rows.push(a);
+  });
+
+  const win = window.open('', '_blank');
+  const style = `
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; margin: 20px; }
+      h1 { font-size: 16px; color: #0D1B3E; margin-bottom: 4px; }
+      h2 { font-size: 13px; color: #0D1B3E; margin: 20px 0 6px; border-bottom: 2px solid #F5C518; padding-bottom: 4px; }
+      .periodo { font-size: 11px; color: #666; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      th { background: #0D1B3E; color: #F5C518; padding: 5px 8px; text-align: left; font-size: 10px; }
+      td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+      tr:nth-child(even) td { background: #f8f9fa; }
+      .total-row td { background: #e6f5ee !important; font-weight: bold; color: #1A7F4B; }
+      .total-empresa { display: flex; justify-content: space-between; background: #e6f5ee; padding: 8px 12px; border-radius: 4px; margin-top: 6px; }
+      .total-empresa span { font-weight: bold; color: #1A7F4B; font-size: 13px; }
+      .resumo-geral { background: #0D1B3E; color: white; padding: 10px 14px; border-radius: 4px; margin-top: 24px; display: flex; gap: 32px; }
+      .resumo-geral div { font-size: 11px; }
+      .resumo-geral strong { font-size: 14px; color: #F5C518; display: block; }
+      @media print { .no-print { display: none; } }
+    </style>`;
+
+  let totalGeral = 0;
+  let totalColabs = acertoDados.length;
+
+  const empresasHTML = Object.entries(porEmpresa).map(([,emp]) => {
+    let totalEmp = 0, totalHMin = 0, totalHE = 0;
+    const rows = emp.rows.map(a => {
+      const { displayH, valor } = calcHoras(a);
+      const vNum = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalEmp += vNum;
+      if (a.chegada && a.saida) {
+        const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+        totalHMin += t;
+        totalHE += Math.max(0, t - 8*60);
+      }
+      return `<tr>
+        <td>${formatDate(a.data)}</td>
+        <td>${a.colNome||'—'}</td>
+        <td style="font-family:monospace">${a.colCPF||'—'}</td>
+        <td>${a.opNome||'—'}</td>
+        <td>${a.funcao||'—'}</td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td>${displayH}</td>
+        <td style="text-align:right;font-weight:bold">R$ ${vNum.toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    totalGeral += totalEmp;
+    return `<h2>🏢 ${emp.nome}</h2>
+      <div class="periodo">${emp.rows.length} colaboradores &nbsp;|&nbsp; H. Trabalhadas: ${minToHM(totalHMin)} &nbsp;|&nbsp; H. Extra: ${minToHM(totalHE)}</div>
+      <table>
+        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Valor</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="total-row"><td colspan="9" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
+      </table>`;
+  }).join('');
+
+  win.document.write(`<!DOCTYPE html><html><head><title>Acerto ${inicio} a ${fim}</title>${style}</head><body>
+    <button class="no-print" onclick="window.print()" style="float:right;background:#0D1B3E;color:white;border:none;padding:8px 18px;border-radius:4px;cursor:pointer;font-size:13px">🖨 Imprimir / Salvar PDF</button>
+    <h1>PORTOEX — Modelo de Acerto</h1>
+    <div class="periodo">Período: <strong>${formatDate(inicio)}</strong> a <strong>${formatDate(fim)}</strong></div>
+    ${empresasHTML}
+    <div class="resumo-geral">
+      <div><strong>${totalColabs}</strong>Total Colaboradores</div>
+      <div><strong>R$ ${totalGeral.toFixed(2).replace('.',',')}</strong>Valor Total Geral</div>
+      <div><strong>${formatDate(inicio)} — ${formatDate(fim)}</strong>Período</div>
+    </div>
+  </body></html>`);
+  win.document.close();
+}
 function openZerarPonto() {
   populateResumoSelects();
   sv('zerar-data', '');
