@@ -962,18 +962,14 @@ tbody tr:hover { background: var(--gray-50); }
       <button class="modal-close" onclick="closeModal('modal-vaga')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid" style="grid-template-columns:auto auto 1fr;gap:14px;align-items:end;">
+      <div class="form-grid" style="grid-template-columns:auto 1fr;gap:14px;align-items:end;">
         <div class="form-group">
           <label>Data de Trabalho *</label>
           <input type="date" id="vaga-data">
         </div>
         <div class="form-group">
-          <label>Horário Previsto</label>
-          <input type="time" id="vaga-hora">
-        </div>
-        <div class="form-group">
-          <label>Direcionar para Empresas</label>
-          <div class="check-group" id="vaga-empresas-check" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;"></div>
+          <label>Direcionar para Empresas <span style="font-weight:400;color:var(--gray-400)">(vazio = todas)</span></label>
+          <div class="check-group" id="vaga-empresas-check" style="flex-wrap:wrap;"></div>
         </div>
       </div>
       <div style="margin-top:18px;">
@@ -985,10 +981,11 @@ tbody tr:hover { background: var(--gray-50); }
           <table id="vaga-linhas-table">
             <thead>
               <tr>
-                <th style="width:36px">#</th>
+                <th style="width:32px">#</th>
                 <th>Operação</th>
                 <th>Função</th>
-                <th style="width:80px">Qtd</th>
+                <th style="width:65px">Qtd</th>
+                <th style="width:110px">Hora Inicial</th>
                 <th style="width:36px"></th>
               </tr>
             </thead>
@@ -1567,42 +1564,45 @@ function renderVagaLinhas() {
   if (!tbody) return;
   const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
   const opOpts = '<option value="">— Operação —</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome} / ${op.cc}</option>`).join('');
-  tbody.innerHTML = vagaLinhas.map((l, i) => `
-    <tr>
-      <td style="color:var(--gray-400);font-size:12px">${i+1}</td>
-      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].opId=this.value">${opOpts.replace(`value="${l.opId}"`,`value="${l.opId}" selected`)}</select></td>
-      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].funcao=this.value">
+  tbody.innerHTML = vagaLinhas.map((l, i) => {
+    const li = vagaLinhas.indexOf(l);
+    return `<tr>
+      <td style="color:var(--gray-400);font-size:12px;text-align:center">${i+1}</td>
+      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].opId=this.value">${opOpts.replace(`value="${l.opId}"`,`value="${l.opId}" selected`)}</select></td>
+      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].funcao=this.value">
         <option value="">— Função —</option>
         <option value="Ajudante Interno" ${l.funcao==='Ajudante Interno'?'selected':''}>Ajudante Interno</option>
         <option value="Ajudante Externo" ${l.funcao==='Ajudante Externo'?'selected':''}>Ajudante Externo</option>
         <option value="Conferente" ${l.funcao==='Conferente'?'selected':''}>Conferente</option>
       </select></td>
-      <td><input type="number" min="0" value="${l.qtd}" style="width:70px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].qtd=parseInt(this.value)||0"></td>
+      <td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>
+      <td><input type="time" value="${l.hora||''}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].hora=this.value"></td>
       <td><button class="btn btn-danger btn-sm" onclick="removeVagaLinha(${l.idx})" style="padding:4px 8px">✕</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function saveVaga() {
-  const data = v('vaga-data'), hora = v('vaga-hora');
+  const data = v('vaga-data');
   if (!data) { toast('Informe a data de trabalho.', 'error'); return; }
-  // Lê os selects diretamente do DOM para pegar valores atuais
   const rows = document.querySelectorAll('#vaga-linhas-body tr');
   const linhas = [];
-  rows.forEach((row, i) => {
+  rows.forEach(row => {
     const sels = row.querySelectorAll('select');
-    const inp = row.querySelector('input[type=number]');
+    const inps = row.querySelectorAll('input');
     const opId = sels[0] ? sels[0].value : '';
     const funcao = sels[1] ? sels[1].value : '';
-    const qtd = inp ? parseInt(inp.value)||0 : 0;
+    const qtd = inps[0] ? parseInt(inps[0].value)||0 : 0;
+    const hora = inps[1] ? inps[1].value : '';
     if (opId && funcao && qtd > 0) {
       const op = STATE.operacoes[opId] || {};
-      linhas.push({ opId, opNome: op.nome, opCC: op.cc, funcao, qtd, atribuicoes: {} });
+      linhas.push({ opId, opNome: op.nome, opCC: op.cc, funcao, qtd, hora, atribuicoes: {} });
     }
   });
   if (!linhas.length) { toast('Preencha ao menos uma linha com operação, função e quantidade > 0.', 'error'); return; }
   const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
   const payload = {
-    data, hora,
+    data,
     linhas,
     empresasAlvo: empsSel.length ? empsSel : null,
     obs: v('vaga-obs'),
@@ -1654,23 +1654,30 @@ function renderMural() {
     const linhasHTML = todasLinhas.map(({ vagaId, linha, li, atribs, minhasAtribs }) => {
       const filled = atribs.length;
       const needed = linha.qtd || 0;
-      const ok = filled >= needed;
-      const minhaInd = minhasAtribs.length > 0;
-      const btnAtribuir = currentUser.role === 'empresa' && !ok
-        ? `<button class="btn btn-yellow btn-sm" style="padding:3px 10px;font-size:11px" onclick="openAtribuir('${vagaId}',${li})">Indicar</button>`
+      const completo = filled >= needed;
+      const vagasRestantes = needed - filled;
+      // Quantas já indiquei nessa linha
+      const minhasQtd = minhasAtribs.length;
+      const podeIndicarMais = currentUser.role === 'empresa' && !completo;
+      const btnAtribuir = podeIndicarMais
+        ? `<button class="btn btn-yellow btn-sm" style="padding:3px 10px;font-size:11px" onclick="openAtribuir('${vagaId}',${li})">Indicar (${vagasRestantes} restante${vagasRestantes>1?'s':''})</button>`
         : '';
-      const statusCell = ok
+      // Lista de nomes já indicados
+      const nomesAtrib = atribs.map(a => `<span style="font-size:10px;background:var(--info-bg);color:var(--info);padding:2px 7px;border-radius:10px;margin:1px;display:inline-block">${a.colNome}</span>`).join('');
+      const statusCell = completo
         ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
-        : minhaInd
-          ? `<span class="badge badge-info" style="font-size:10px">✓ Indicado</span>`
+        : filled > 0
+          ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
           : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
       return `<tr>
         <td style="font-weight:600;font-size:12px">${linha.opNome||'—'}</td>
         <td><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
         <td style="font-size:12px">${linha.funcao||'—'}</td>
-        <td style="font-size:12px;text-align:center">${needed}</td>
+        <td style="font-size:12px;text-align:center;font-weight:600">${needed}</td>
+        <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${linha.hora||'—'}</td>
         <td>${statusCell}</td>
-        <td>${btnAtribuir}${currentUser.role==='admin'?`<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`:''}</td>
+        <td style="min-width:180px">${nomesAtrib}</td>
+        <td>${btnAtribuir}${currentUser.role==='admin'&&minhasAtribs.length===0?'':''}</td>
       </tr>`;
     }).join('');
     const btnEncerrar = currentUser.role === 'admin'
@@ -1695,7 +1702,9 @@ function renderMural() {
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">C. Custo</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
               <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Qtd</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Hora</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
               <th style="padding:8px 14px;border-bottom:1px solid var(--gray-200)"></th>
             </tr>
           </thead>
