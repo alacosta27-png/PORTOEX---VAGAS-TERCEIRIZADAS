@@ -871,6 +871,28 @@ tbody tr:hover { background: var(--gray-50); }
       </div>
     </div>
 
+    <!-- ===================== PÁGINA: MOTORISTAS ===================== -->
+    <div id="page-motoristas" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🚛 Cadastro de Motoristas</div>
+          <div class="section-sub">Motoristas vinculáveis aos ajudantes de ROTA</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <a href="portoex-tv.html" target="_blank" class="btn btn-yellow" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            📺 Abrir Tela TV
+          </a>
+          <button class="btn btn-navy" onclick="openModal('modal-motorista')">+ Novo Motorista</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Identificação / Placa</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="motoristas-tbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum motorista cadastrado.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- content-area -->
 </div><!-- app-layout -->
 
@@ -1137,6 +1159,22 @@ tbody tr:hover { background: var(--gray-50); }
         </div>
       </div>
       <div id="ae-preview" style="margin-top:16px;"></div>
+      <!-- Campos extras para ROTA -->
+      <div id="ae-rota-wrap" style="display:none;margin-top:16px;border-top:1px solid var(--gray-200);padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚛 Informações de Rota</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Motorista</label>
+            <select id="ae-motorista">
+              <option value="">Selecione o motorista...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Número da MD</label>
+            <input type="text" id="ae-md" placeholder="Ex: 12345">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-acomp-edit')">Cancelar</button>
@@ -1224,8 +1262,38 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
-<!-- Toast -->
-<div id="toast"></div>
+<!-- Modal: Novo Motorista -->
+<div class="modal-overlay" id="modal-motorista">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Cadastrar Motorista</div>
+      <button class="modal-close" onclick="closeModal('modal-motorista')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome completo *</label>
+          <input type="text" id="mot-nome" placeholder="Nome do motorista">
+        </div>
+        <div class="form-group">
+          <label>Identificação / Placa / Veículo</label>
+          <input type="text" id="mot-ident" placeholder="Ex: ABC-1234 ou Truck 07">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="mot-status">
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-motorista')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveMotorista()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===================== FIREBASE CONFIG =====================
@@ -1250,7 +1318,8 @@ let STATE = {
   colaboradores: {},
   vagas: {},
   acompanhamento: {},
-  notificacoes: {}
+  notificacoes: {},
+  motoristas: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -1374,6 +1443,7 @@ function buildNavTabs() {
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
         { id: 'page-empresas', label: 'Empresas' },
         { id: 'page-operacoes', label: 'Operações' },
+        { id: 'page-motoristas', label: 'Motoristas' },
       ]
     : [
         { id: 'page-mural', label: 'Mural de Vagas' },
@@ -1411,6 +1481,7 @@ function switchPage(pageId) {
   if (pageId === 'page-empresas') renderEmpresas();
   if (pageId === 'page-operacoes') renderOperacoes();
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
+  if (pageId === 'page-motoristas') renderMotoristas();
 }
 
 function switchInner(group, tab) {
@@ -1426,6 +1497,7 @@ function listenFirebase() {
   db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
+  db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
   db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); });
   if (currentUser.role === 'admin') {
     db.ref('notificacoes').on('value', snap => {
@@ -2277,6 +2349,46 @@ function minToHM(m) {
   return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 }
 
+// ===================== MOTORISTAS =====================
+function renderMotoristas() {
+  const tbody = document.getElementById('motoristas-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.motoristas || {});
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum motorista cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(([id, m]) => `<tr>
+    <td class="td-name">${m.nome}</td>
+    <td class="td-mono">${m.ident||'—'}</td>
+    <td><span class="badge ${m.status==='ativo'?'badge-success':'badge-gray'}">${m.status}</span></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-danger btn-sm" onclick="deleteMotorista('${id}')">Excluir</button>
+    </td>
+  </tr>`).join('');
+}
+
+function saveMotorista() {
+  const nome = v('mot-nome');
+  if (!nome) { toast('Informe o nome.', 'error'); return; }
+  db.ref('motoristas').push({ nome, ident: v('mot-ident'), status: v('mot-status') })
+    .then(() => { toast('Motorista salvo!', 'success'); closeModal('modal-motorista'); sv('mot-nome',''); sv('mot-ident',''); });
+}
+
+function deleteMotorista(id) {
+  if (!confirm('Excluir este motorista?')) return;
+  db.ref('motoristas/' + id).remove().then(() => toast('Motorista excluído.'));
+}
+
+function populateMotoristaSelect() {
+  const sel = document.getElementById('ae-motorista');
+  if (!sel) return;
+  const ativos = Object.entries(STATE.motoristas || {}).filter(([,m]) => m.status === 'ativo');
+  sel.innerHTML = '<option value="">Selecione o motorista...</option>' +
+    ativos.map(([id,m]) => `<option value="${id}">${m.nome}${m.ident ? ' — '+m.ident : ''}</option>`).join('');
+}
+
+// ===================== ACOMP EDIT (admin) =====================
 function openAcompEdit(id) {
   currentAcompId = id;
   const a = STATE.acompanhamento[id];
@@ -2292,6 +2404,16 @@ function openAcompEdit(id) {
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
+
+  // Campos de ROTA
+  const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
+  const rotaWrap = document.getElementById('ae-rota-wrap');
+  rotaWrap.style.display = isRota ? 'block' : 'none';
+  if (isRota) {
+    populateMotoristaSelect();
+    sv('ae-motorista', a.motoristaId||'');
+    sv('ae-md', a.md||'');
+  }
 
   // Mostrar desacordo se pendente
   const desacordo = a.desacordo || {};
@@ -2487,6 +2609,8 @@ function updateAcompPreview() {
 
 function saveAcompEdit() {
   const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
   const data = {
     chegada: v('ae-chegada'),
     refeicao: refVal,
@@ -2494,6 +2618,12 @@ function saveAcompEdit() {
     desconto: v('ae-desconto'),
     status: v('ae-status')
   };
+  if (isRota) {
+    const motId = v('ae-motorista');
+    data.motoristaId = motId;
+    data.motoristaNome = motId && STATE.motoristas[motId] ? STATE.motoristas[motId].nome : '';
+    data.md = v('ae-md');
+  }
   db.ref('acompanhamento/' + currentAcompId).update(data).then(() => {
     toast('Ponto salvo!', 'success');
     closeModal('modal-acomp-edit');
