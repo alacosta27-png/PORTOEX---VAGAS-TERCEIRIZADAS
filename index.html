@@ -1079,13 +1079,23 @@ tbody tr:hover { background: var(--gray-50); }
     </div>
   </div>
 </div>
+<!-- Modal: Admin — Editar Ponto -->
 <div class="modal-overlay" id="modal-acomp-edit">
-  <div class="modal">
+  <div class="modal" style="max-width:660px">
     <div class="modal-header">
       <div class="modal-title" id="acomp-edit-title">Editar Ponto</div>
       <button class="modal-close" onclick="closeModal('modal-acomp-edit')">✕</button>
     </div>
     <div class="modal-body">
+      <!-- Desacordo da empresa (se houver) -->
+      <div id="ae-desacordo-wrap" style="display:none;margin-bottom:16px;background:var(--warning-bg);border-radius:var(--radius);padding:12px;border-left:3px solid var(--warning)">
+        <div style="font-size:11px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">⚠️ Desacordo registrado pela empresa</div>
+        <div id="ae-desacordo-info" style="font-size:13px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-success btn-sm" onclick="aceitarDesacordo()">✓ Aceitar sugestão</button>
+          <button class="btn btn-danger btn-sm" onclick="recusarDesacordo()">✕ Recusar</button>
+        </div>
+      </div>
       <div class="form-grid">
         <div class="form-group">
           <label>Horário Real de Chegada</label>
@@ -1135,6 +1145,85 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
+<!-- Modal: Empresa — Sugerir Alteração no Ponto -->
+<div class="modal-overlay" id="modal-acomp-sugestao">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header" style="background:var(--warning);border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+      <div class="modal-title">Sugerir Alteração no Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-acomp-sugestao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--warning-bg);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:16px">
+        ⚠️ Sua sugestão será enviada ao administrador para análise. Os dados originais não serão alterados até a aprovação.
+      </div>
+      <div id="sug-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Chegada sugerida</label>
+          <input type="time" id="sug-chegada">
+        </div>
+        <div class="form-group">
+          <label>Refeição sugerida</label>
+          <select id="sug-refeicao">
+            <option value="01:00">01h00</option>
+            <option value="01:30">01h30</option>
+            <option value="02:00">02h00</option>
+            <option value="manual">Manual...</option>
+          </select>
+        </div>
+        <div class="form-group" id="sug-ref-manual-wrap" style="display:none">
+          <label>Refeição manual</label>
+          <input type="time" id="sug-ref-manual">
+        </div>
+        <div class="form-group">
+          <label>Saída sugerida</label>
+          <input type="time" id="sug-saida">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Motivo / Observação *</label>
+        <textarea id="sug-motivo" placeholder="Explique o motivo da sugestão de alteração..." style="min-height:70px"></textarea>
+      </div>
+      <div id="sug-preview" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-acomp-sugestao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="enviarSugestao()">Enviar Sugestão</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Empresa — Gerenciar Indicação -->
+<div class="modal-overlay" id="modal-gerenciar-indicacao">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Gerenciar Indicação</div>
+      <button class="modal-close" onclick="closeModal('modal-gerenciar-indicacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="gi-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div style="background:var(--warning-bg);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:14px">
+        ⚠️ Edições e exclusões serão notificadas ao administrador para validação.
+      </div>
+      <div class="form-group">
+        <label>Alterar colaborador indicado</label>
+        <select id="gi-col-novo">
+          <option value="">Manter o atual</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Motivo da alteração / exclusão</label>
+        <textarea id="gi-motivo" placeholder="Informe o motivo..." style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gerenciar-indicacao')">Cancelar</button>
+      <button class="btn btn-danger" onclick="solicitarExclusaoIndicacao()">Solicitar Exclusão</button>
+      <button class="btn btn-navy" onclick="solicitarEdicaoIndicacao()">Solicitar Alteração</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -1160,7 +1249,8 @@ let STATE = {
   operacoes: {},
   colaboradores: {},
   vagas: {},
-  acompanhamento: {}
+  acompanhamento: {},
+  notificacoes: {}
 };
 let editEmpresaId = null;
 let editVagaId = null;
@@ -1337,6 +1427,12 @@ function listenFirebase() {
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
   db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); });
+  if (currentUser.role === 'admin') {
+    db.ref('notificacoes').on('value', snap => {
+      STATE.notificacoes = snap.val() || {};
+      updateNotifBadge();
+    });
+  }
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
     : 'colaboradores';
@@ -1632,7 +1728,7 @@ function populateVagaModal() {
   vagaLinhas = [];
   vagaLinhaCounter = 0;
   // Adiciona 15 linhas vazias por padrão
-  for (let i = 0; i < 15; i++) addVagaLinha();
+  for (let i = 0; i < 3; i++) addVagaLinha();
 }
 
 function populateVagaEmpresasCheck() {
@@ -2047,19 +2143,40 @@ function renderAcompRow(id, a) {
     'Ausente': 'badge-danger',
     'Encerrado': 'badge-gray'
   }[a.status] || 'badge-gray';
-  const podeEditar = currentUser.role === 'admin' || a.empresaId === currentUser.empresaId;
 
   // Avaliação
   const av = a.avaliacao || {};
   const starsDisplay = [1,2,3,4,5].map(i => `<span style="color:${i<=(av.nota||0)?'var(--yellow)':'var(--gray-200)'}">★</span>`).join('');
+  const podeAvaliar = currentUser.role === 'admin';
   const avalCell = av.bloqueada
     ? `<div style="font-size:13px">${starsDisplay}<br><span style="font-size:10px;color:var(--gray-400)">${av.obs||''}</span></div>`
-    : podeEditar
+    : podeAvaliar
       ? `<button class="btn btn-ghost btn-sm" onclick="openAvaliacao('${id}')">${av.nota ? starsDisplay : '☆ Avaliar'}</button>`
-      : '—';
+      : av.nota ? `<div style="font-size:13px">${starsDisplay}</div>` : '—';
 
-  return `<tr>
-    <td class="td-name">${a.colNome}</td>
+  // Desacordo pendente
+  const desacordo = a.desacordo || {};
+  const temDesacordoPendente = desacordo.status === 'pendente';
+  const desacordoCell = temDesacordoPendente
+    ? `<span class="badge badge-warning" style="font-size:10px;cursor:pointer" onclick="openAcompEdit('${id}')">⚠️ Desacordo</span>`
+    : '';
+
+  // Ações por role
+  let acoes = '—';
+  if (currentUser.role === 'admin') {
+    acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
+      ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="openAcompEdit('${id}')">⚠️ Ver desacordo</button>` : ''}
+    </div>`;
+  } else if (a.empresaId === currentUser.empresaId) {
+    acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openSugestao('${id}')">Sugerir alteração</button>
+      <button class="btn btn-ghost btn-sm" onclick="openGerenciarIndicacao('${id}')">Indicação</button>
+    </div>`;
+  }
+
+  return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : ''}">
+    <td class="td-name">${a.colNome} ${desacordoCell}</td>
     <td style="font-size:12px">${a.empresaNome||'—'}</td>
     <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
     <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
@@ -2071,7 +2188,7 @@ function renderAcompRow(id, a) {
     <td style="font-size:12px;font-weight:600">${valor}</td>
     <td>${avalCell}</td>
     <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
-    <td>${podeEditar ? `<button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>` : '—'}</td>
+    <td>${acoes}</td>
   </tr>`;
 }
 
@@ -2169,23 +2286,184 @@ function openAcompEdit(id) {
   if (!['01:00','01:30','02:00'].includes(a.refeicao) && a.refeicao) {
     sv('ae-ref-manual', a.refeicao);
     document.getElementById('ae-ref-manual-wrap').style.display = 'block';
+  } else {
+    document.getElementById('ae-ref-manual-wrap').style.display = 'none';
   }
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
+
+  // Mostrar desacordo se pendente
+  const desacordo = a.desacordo || {};
+  const wrap = document.getElementById('ae-desacordo-wrap');
+  const info = document.getElementById('ae-desacordo-info');
+  if (desacordo.status === 'pendente') {
+    wrap.style.display = 'block';
+    info.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;font-size:12px">
+        <div><span style="color:var(--gray-400)">Chegada sugerida</span><br><strong>${desacordo.chegada||'—'}</strong></div>
+        <div><span style="color:var(--gray-400)">Refeição sugerida</span><br><strong>${desacordo.refeicao||'—'}</strong></div>
+        <div><span style="color:var(--gray-400)">Saída sugerida</span><br><strong>${desacordo.saida||'—'}</strong></div>
+      </div>
+      <div style="font-size:12px"><span style="color:var(--gray-400)">Motivo:</span> ${desacordo.motivo||'—'}</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Enviado por: ${desacordo.empresaNome||'—'} em ${desacordo.enviadoEm ? new Date(desacordo.enviadoEm).toLocaleString('pt-BR') : '—'}</div>`;
+  } else {
+    wrap.style.display = 'none';
+  }
   updateAcompPreview();
   openModal('modal-acomp-edit');
+}
+
+function aceitarDesacordo() {
+  const a = STATE.acompanhamento[currentAcompId];
+  const d = a.desacordo || {};
+  const refVal = d.refeicao || a.refeicao;
+  db.ref('acompanhamento/' + currentAcompId).update({
+    chegada: d.chegada || a.chegada,
+    refeicao: refVal,
+    saida: d.saida || a.saida,
+    'desacordo/status': 'aceito'
+  }).then(() => { toast('Sugestão aceita e aplicada!', 'success'); closeModal('modal-acomp-edit'); });
+}
+
+function recusarDesacordo() {
+  db.ref(`acompanhamento/${currentAcompId}/desacordo/status`).set('recusado')
+    .then(() => { toast('Sugestão recusada.'); closeModal('modal-acomp-edit'); });
+}
+
+// ---- EMPRESA: Sugerir alteração no ponto ----
+let currentSugestaoId = null;
+
+function openSugestao(id) {
+  currentSugestaoId = id;
+  const a = STATE.acompanhamento[id];
+  document.getElementById('sug-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${formatDate(a.data)}</div>
+     <div style="font-size:12px;margin-top:6px;display:flex;gap:16px">
+       <span><span style="color:var(--gray-400)">Chegada atual:</span> <strong>${a.chegada||'—'}</strong></span>
+       <span><span style="color:var(--gray-400)">Refeição:</span> <strong>${a.refeicao||'—'}</strong></span>
+       <span><span style="color:var(--gray-400)">Saída:</span> <strong>${a.saida||'—'}</strong></span>
+     </div>`;
+  sv('sug-chegada', a.chegada||'');
+  sv('sug-refeicao', ['01:00','01:30','02:00'].includes(a.refeicao) ? a.refeicao : '01:00');
+  sv('sug-saida', a.saida||'');
+  sv('sug-motivo', '');
+  document.getElementById('sug-ref-manual-wrap').style.display = 'none';
+  document.getElementById('sug-preview').innerHTML = '';
+  openModal('modal-acomp-sugestao');
 }
 
 document.addEventListener('change', e => {
   if (e.target.id === 'ae-refeicao') {
     document.getElementById('ae-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
   }
+  if (e.target.id === 'sug-refeicao') {
+    document.getElementById('sug-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
+  }
   if (['ae-chegada','ae-refeicao','ae-saida','ae-ref-manual','ae-desconto'].includes(e.target.id)) updateAcompPreview();
+  if (['sug-chegada','sug-refeicao','sug-saida','sug-ref-manual'].includes(e.target.id)) updateSugPreview();
 });
 document.addEventListener('input', e => {
   if (['ae-chegada','ae-saida','ae-ref-manual'].includes(e.target.id)) updateAcompPreview();
+  if (['sug-chegada','sug-saida','sug-ref-manual'].includes(e.target.id)) updateSugPreview();
 });
+
+function updateSugPreview() {
+  const a = STATE.acompanhamento[currentSugestaoId] || {};
+  const chegada = v('sug-chegada');
+  const refVal = v('sug-refeicao') === 'manual' ? v('sug-ref-manual') : v('sug-refeicao');
+  const saida = v('sug-saida');
+  if (!chegada || !saida) { document.getElementById('sug-preview').innerHTML = ''; return; }
+  const mock = { ...a, chegada, refeicao: refVal, saida };
+  const { displayH, classe, valor } = calcHoras(mock);
+  const prev = chegada && refVal ? minToHM(timeToMin(chegada) + 8*60 + timeToMin(refVal)) : '—';
+  document.getElementById('sug-preview').innerHTML = `
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+      <div><div style="color:var(--gray-400)">Previsão Saída</div><div style="font-weight:600">${prev}</div></div>
+      <div><div style="color:var(--gray-400)">H. Trabalhadas</div><div class="${classe}" style="font-weight:600">${displayH}</div></div>
+      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600">${valor}</div></div>
+    </div>`;
+}
+
+function enviarSugestao() {
+  const motivo = v('sug-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da sugestão.', 'error'); return; }
+  const refVal = v('sug-refeicao') === 'manual' ? v('sug-ref-manual') : v('sug-refeicao');
+  const desacordo = {
+    chegada: v('sug-chegada'),
+    refeicao: refVal,
+    saida: v('sug-saida'),
+    motivo,
+    status: 'pendente',
+    empresaId: currentUser.empresaId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref(`acompanhamento/${currentSugestaoId}/desacordo`).set(desacordo)
+    .then(() => { toast('Sugestão enviada ao administrador!', 'success'); closeModal('modal-acomp-sugestao'); });
+}
+
+// ---- EMPRESA: Gerenciar indicação ----
+let currentIndicacaoId = null;
+
+function openGerenciarIndicacao(acompId) {
+  currentIndicacaoId = acompId;
+  const a = STATE.acompanhamento[acompId];
+  document.getElementById('gi-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${a.funcao} — ${formatDate(a.data)}</div>`;
+  sv('gi-motivo', '');
+
+  // Popular lista de colaboradores (exceto o atual)
+  const empId = currentUser.empresaId;
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([id,c]) => id !== a.colId && (c.status||'ativo') === 'ativo');
+  const sel = document.getElementById('gi-col-novo');
+  sel.innerHTML = '<option value="">Manter o atual</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+  openModal('modal-gerenciar-indicacao');
+}
+
+function solicitarEdicaoIndicacao() {
+  const novoColId = v('gi-col-novo');
+  const motivo = v('gi-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da solicitação.', 'error'); return; }
+  const empId = currentUser.empresaId;
+  const novoCol = novoColId ? (STATE.colaboradores[empId]||{})[novoColId] : null;
+  const notif = {
+    tipo: 'edicao_indicacao',
+    acompId: currentIndicacaoId,
+    novoColId: novoColId || null,
+    novoColNome: novoCol ? novoCol.nome : null,
+    motivo,
+    status: 'pendente',
+    empresaId: empId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref('notificacoes').push(notif).then(() => {
+    toast('Solicitação de alteração enviada ao administrador!', 'success');
+    closeModal('modal-gerenciar-indicacao');
+  });
+}
+
+function solicitarExclusaoIndicacao() {
+  const motivo = v('gi-motivo');
+  if (!motivo.trim()) { toast('Informe o motivo da exclusão.', 'error'); return; }
+  if (!confirm('Confirmar solicitação de exclusão desta indicação?')) return;
+  const notif = {
+    tipo: 'exclusao_indicacao',
+    acompId: currentIndicacaoId,
+    motivo,
+    status: 'pendente',
+    empresaId: currentUser.empresaId,
+    empresaNome: currentUser.empresaNome,
+    enviadoEm: Date.now()
+  };
+  db.ref('notificacoes').push(notif).then(() => {
+    toast('Solicitação de exclusão enviada ao administrador!', 'success');
+    closeModal('modal-gerenciar-indicacao');
+  });
+}
 
 function updateAcompPreview() {
   const a = STATE.acompanhamento[currentAcompId] || {};
@@ -2223,6 +2501,15 @@ function saveAcompEdit() {
 }
 
 // ===================== UTILS =====================
+function updateNotifBadge() {
+  const pendentes = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.dataset.page === 'page-acompanhamento') {
+      t.innerHTML = `Acompanhamento${pendentes > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${pendentes}</span>` : ''}`;
+    }
+  });
+}
+
 function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function n(id) { return parseFloat(v(id)) || 0; }
