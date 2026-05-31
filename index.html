@@ -1475,6 +1475,7 @@ const ADMIN_LOGINS = [
 // ===================== OPERAÇÕES PADRÃO =====================
 // Mapa fixo: operação → função automática
 const OP_FUNCAO_MAP = {
+  'EXPEDIÇÃO': 'Ajudante Interno',
   'ROTA':     'Ajudante Externo',
   'ESTOQUE':  'Ajudante Interno',
   'BRAFT':    'Ajudante Externo',
@@ -1500,15 +1501,16 @@ function funcaoBadge(funcao) {
 }
 
 const OPERACOES_PADRAO = [
-  { nome: 'ROTA',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'ESTOQUE',  cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
-  { nome: 'BRAFT',    cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'SAMSONITE',cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'MATTEL',   cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
-  { nome: 'MANOBRA',  cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'THOMPSON', cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'S.K.O',    cc: 'ROTA',      funcao: 'Ajudante Externo' },
-  { nome: 'N/D',      cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'EXPEDIÇÃO', cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'ROTA',      cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'ESTOQUE',   cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'BRAFT',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'SAMSONITE', cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'MATTEL',    cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'MANOBRA',   cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'THOMPSON',  cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'S.K.O',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'N/D',       cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
 ];
 
 // ===================== LOGIN =====================
@@ -1707,13 +1709,22 @@ function listenFirebase() {
 
 function initOperacoesPadrao() {
   db.ref('operacoes').once('value', snap => {
+    const ops = snap.val() || {};
+    const nomesCadastrados = Object.values(ops).map(op => op.nome.trim().toUpperCase());
+
     if (!snap.val()) {
+      // Banco vazio — cadastra todas as padrão
       OPERACOES_PADRAO.forEach(op => {
         db.ref('operacoes').push({ nome: op.nome, cc: op.cc, funcao: op.funcao, ativa: 'sim' });
       });
     } else {
+      // Banco já existe — verifica e adiciona as que estão faltando
+      OPERACOES_PADRAO.forEach(op => {
+        if (!nomesCadastrados.includes(op.nome.trim().toUpperCase())) {
+          db.ref('operacoes').push({ nome: op.nome, cc: op.cc, funcao: op.funcao, ativa: 'sim' });
+        }
+      });
       // Atualiza funcao nas operações existentes que não têm o campo
-      const ops = snap.val();
       Object.entries(ops).forEach(([id, op]) => {
         if (!op.funcao && OP_FUNCAO_MAP[op.nome]) {
           db.ref(`operacoes/${id}/funcao`).set(OP_FUNCAO_MAP[op.nome]);
