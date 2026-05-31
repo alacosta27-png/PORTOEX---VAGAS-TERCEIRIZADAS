@@ -843,6 +843,9 @@ tbody tr:hover { background: var(--gray-50); }
           <div class="section-sub">Controle de chegada, refeição e horas trabalhadas</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="btn-sugestoes-pendentes" class="btn btn-sm" style="display:none;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning);font-weight:700" onclick="openModal('modal-sugestoes')">
+            ⚠️ <span id="sugestoes-count">0</span> Sugestão(ões) Pendente(s)
+          </button>
           <div class="form-group" style="margin:0">
             <select id="filter-data-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
               <option value="">Todas as datas</option>
@@ -971,6 +974,22 @@ tbody tr:hover { background: var(--gray-50); }
 </div><!-- app-layout -->
 
 <!-- ===================== MODALS ===================== -->
+
+<!-- Modal: Sugestões Pendentes -->
+<div class="modal-overlay" id="modal-sugestoes">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header" style="background:var(--warning)">
+      <div class="modal-title">⚠️ Sugestões de Correção Pendentes</div>
+      <button class="modal-close" onclick="closeModal('modal-sugestoes')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="sugestoes-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sugestoes')">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Nova Empresa -->
 <div class="modal-overlay" id="modal-empresa">
@@ -1633,7 +1652,7 @@ function switchPage(pageId) {
   document.getElementById(pageId).classList.add('active');
 
   if (pageId === 'page-mural') renderMural();
-  if (pageId === 'page-acompanhamento') renderAcompanhamento();
+  if (pageId === 'page-acompanhamento') { renderAcompanhamento(); renderSugestoesPendentes(); }
   if (pageId === 'page-colaboradores') renderColLista();
   if (pageId === 'page-empresas') renderEmpresas();
   if (pageId === 'page-operacoes') renderOperacoes();
@@ -1686,7 +1705,7 @@ function listenFirebase() {
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
   db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
-  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); });
+  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); renderSugestoesPendentes(); });
   if (currentUser.role === 'admin') {
     db.ref('notificacoes').on('value', snap => {
       STATE.notificacoes = snap.val() || {};
@@ -2564,7 +2583,7 @@ function renderAcompRow(id, a, opCor) {
   const desacordo = a.desacordo || {};
   const temDesacordoPendente = desacordo.status === 'pendente';
   const desacordoCell = temDesacordoPendente
-    ? `<span class="badge badge-warning" style="font-size:10px;cursor:pointer" onclick="openAcompEdit('${id}')">⚠️ Desacordo</span>`
+    ? `<span class="badge badge-warning" style="font-size:10px;cursor:pointer" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Sugestão</span>`
     : '';
 
   // Ações por role
@@ -2572,7 +2591,7 @@ function renderAcompRow(id, a, opCor) {
   if (currentUser.role === 'admin') {
     acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
-      ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="openAcompEdit('${id}')">⚠️ Ver desacordo</button>` : ''}
+      ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="renderSugestoesPendentes();openModal('modal-sugestoes')">⚠️ Ver sugestão</button>` : ''}
     </div>`;
   } else if (a.empresaId === currentUser.empresaId ||
              (!a.empresaId && (a.empresaNome||'').trim().toUpperCase() === (currentUser.empresaNome||'').trim().toUpperCase())) {
@@ -2765,6 +2784,95 @@ function atualizarFuncaoEdit() {
   const rotaWrap = document.getElementById('ae-rota-wrap');
   rotaWrap.style.display = isRota ? 'block' : 'none';
   if (isRota) { populateMotoristaSelect(); }
+}
+
+function renderSugestoesPendentes() {
+  // Coleta todos os registros com desacordo pendente
+  const pendentes = Object.entries(STATE.acompanhamento)
+    .filter(([,a]) => a.desacordo && a.desacordo.status === 'pendente')
+    .sort(([,a],[,b]) => (b.desacordo?.enviadoEm||0) - (a.desacordo?.enviadoEm||0));
+
+  // Atualizar botão do cabeçalho
+  const btn = document.getElementById('btn-sugestoes-pendentes');
+  const cnt = document.getElementById('sugestoes-count');
+  if (btn) {
+    btn.style.display = pendentes.length > 0 && currentUser.role === 'admin' ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = pendentes.length;
+  }
+
+  // Renderizar lista no modal
+  const lista = document.getElementById('sugestoes-lista');
+  if (!lista) return;
+
+  if (!pendentes.length) {
+    lista.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma sugestão pendente.</div></div>';
+    return;
+  }
+
+  lista.innerHTML = pendentes.map(([id, a]) => {
+    const d = a.desacordo;
+    // Calcular diferença entre atual e sugerido
+    const chegDif = d.chegada && a.chegada && d.chegada !== a.chegada;
+    const saidaDif = d.saida && a.saida && d.saida !== a.saida;
+    const refDif = d.refeicao && a.refeicao && d.refeicao !== a.refeicao;
+
+    const campo = (label, atual, sugerido, diferente) => `
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${label}</div>
+        <div style="font-size:13px;color:var(--gray-400);text-decoration:line-through">${atual||'—'}</div>
+        <div style="font-size:15px;font-weight:700;color:${diferente?'var(--warning)':'var(--gray-600)'}">${sugerido||'—'}</div>
+        ${diferente?'<div style="font-size:9px;color:var(--warning);font-weight:700">ALTERADO</div>':''}
+      </div>`;
+
+    return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:4px">${a.colNome||'—'}</div>
+          <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
+            <span>🏢 <strong>${d.empresaNome||a.empresaNome||'—'}</strong></span>
+            <span>📅 ${formatDate(a.data)}</span>
+            <span>⚙️ ${a.opNome||'—'}</span>
+            <span>👔 ${a.funcao||'—'}</span>
+          </div>
+          <div style="margin-top:8px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
+            <span style="color:var(--warning);font-weight:600">Motivo: </span>${d.motivo||'—'}
+          </div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
+            Enviado em ${d.enviadoEm ? new Date(d.enviadoEm).toLocaleString('pt-BR') : '—'}
+          </div>
+        </div>
+        <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px 16px;display:flex;gap:20px;align-items:center;flex-shrink:0">
+          ${campo('Chegada', a.chegada, d.chegada, chegDif)}
+          ${campo('Refeição', a.refeicao, d.refeicao, refDif)}
+          ${campo('Saída', a.saida, d.saida, saidaDif)}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="recusarSugestao('${id}')">✕ Recusar</button>
+        <button class="btn btn-success btn-sm" onclick="aceitarSugestao('${id}')">✓ Aceitar e aplicar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function aceitarSugestao(id) {
+  const a = STATE.acompanhamento[id];
+  const d = a.desacordo || {};
+  const updates = { 'desacordo/status': 'aceito' };
+  if (d.chegada) updates.chegada = d.chegada;
+  if (d.saida) updates.saida = d.saida;
+  if (d.refeicao) updates.refeicao = d.refeicao;
+  db.ref('acompanhamento/' + id).update(updates).then(() => {
+    toast('Sugestão aceita e ponto atualizado!', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function recusarSugestao(id) {
+  db.ref(`acompanhamento/${id}/desacordo/status`).set('recusado').then(() => {
+    toast('Sugestão recusada.', 'success');
+    renderSugestoesPendentes();
+  });
 }
 
 // ===================== ACOMP EDIT (admin) =====================
