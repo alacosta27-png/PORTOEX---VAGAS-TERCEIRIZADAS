@@ -644,6 +644,11 @@ tbody tr:hover { background: var(--gray-50); }
 }
 .func-box .form-group label { font-size: 10px; }
 
+/* ===== ESTRELAS ===== */
+.star { color: var(--gray-200); transition: color 0.1s; }
+.star.ativa { color: var(--yellow); }
+.star:hover { color: var(--yellow-dark); }
+
 /* ===== TOAST ===== */
 #toast {
   position: fixed;
@@ -697,6 +702,9 @@ tbody tr:hover { background: var(--gray-50); }
       <label>Senha</label>
       <input type="password" id="login-pass" placeholder="••••••" autocomplete="current-password">
       <button class="btn-primary" onclick="doLogin()">Entrar</button>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--gray-600);cursor:pointer">
+        <input type="checkbox" id="login-lembrar" style="width:16px;height:16px;accent-color:var(--navy)"> Lembrar login
+      </label>
       <div class="login-error" id="login-error">Usuário ou senha inválidos.</div>
     </div>
   </div>
@@ -833,10 +841,17 @@ tbody tr:hover { background: var(--gray-50); }
           <div class="section-title">⏱️ Acompanhamento de Ponto</div>
           <div class="section-sub">Controle de chegada, refeição e horas trabalhadas</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select id="filter-op-acomp" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;" onchange="renderAcompanhamento()">
-            <option value="">Todas as operações</option>
-          </select>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div class="form-group" style="margin:0">
+            <select id="filter-data-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
+              <option value="">Todas as datas</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <select id="filter-op-acomp" style="padding:7px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="renderAcompanhamento()">
+              <option value="">Todas as operações</option>
+            </select>
+          </div>
         </div>
       </div>
       <div id="acomp-container"></div>
@@ -1006,30 +1021,55 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
-<!-- Modal: Atribuir Colaborador à linha de vaga -->
+<!-- Modal: Atribuir Colaboradores — painel completo da vaga -->
 <div class="modal-overlay" id="modal-atribuir">
-  <div class="modal">
+  <div class="modal" style="max-width:860px">
     <div class="modal-header">
-      <div class="modal-title">Indicar Colaborador para a Vaga</div>
+      <div class="modal-title" id="atribuir-modal-title">Indicar Colaboradores</div>
       <button class="modal-close" onclick="closeModal('modal-atribuir')">✕</button>
     </div>
-    <div class="modal-body">
-      <div id="atribuir-vaga-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
-      <div class="form-group">
-        <label>Colaborador *</label>
-        <select id="atribuir-col">
-          <option value="">Selecione um colaborador...</option>
-        </select>
-      </div>
+    <div class="modal-body" style="padding:0">
+      <div id="atribuir-painel"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-atribuir')">Cancelar</button>
-      <button class="btn btn-navy" onclick="confirmarAtribuicao()">Confirmar Indicação</button>
+      <button class="btn btn-navy" onclick="closeModal('modal-atribuir')">Fechar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Acompanhamento – editar linha -->
+<!-- Modal: Avaliar Colaborador -->
+<div class="modal-overlay" id="modal-avaliacao">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Avaliar Colaborador</div>
+      <button class="modal-close" onclick="closeModal('modal-avaliacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="avaliacao-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="form-group">
+        <label>Avaliação (estrelas)</label>
+        <div id="star-selector" style="display:flex;gap:6px;margin-top:6px;font-size:28px;cursor:pointer">
+          <span class="star" data-val="1" onclick="setStar(1)">☆</span>
+          <span class="star" data-val="2" onclick="setStar(2)">☆</span>
+          <span class="star" data-val="3" onclick="setStar(3)">☆</span>
+          <span class="star" data-val="4" onclick="setStar(4)">☆</span>
+          <span class="star" data-val="5" onclick="setStar(5)">☆</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label>Observações</label>
+        <textarea id="avaliacao-obs" placeholder="Comentários sobre o colaborador..." style="min-height:80px"></textarea>
+      </div>
+      <div id="avaliacao-bloqueada" style="display:none;margin-top:12px;padding:10px 14px;background:var(--warning-bg);border-radius:var(--radius);font-size:12px;color:var(--warning)">
+        ⚠️ Esta avaliação já foi finalizada e não pode ser alterada.
+      </div>
+    </div>
+    <div class="modal-footer" id="avaliacao-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-avaliacao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="salvarAvaliacao()">Salvar & Bloquear</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-acomp-edit">
   <div class="modal">
     <div class="modal-header">
@@ -1139,8 +1179,17 @@ const OPERACOES_PADRAO = [
 function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value.trim();
+  const lembrar = document.getElementById('login-lembrar').checked;
   const errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
+
+  if (lembrar) {
+    localStorage.setItem('px_login', user);
+    localStorage.setItem('px_pass', pass);
+  } else {
+    localStorage.removeItem('px_login');
+    localStorage.removeItem('px_pass');
+  }
 
   if (user === ADMIN_LOGIN && pass === ADMIN_SENHA) {
     currentUser = { role: 'admin', login: user };
@@ -1148,7 +1197,6 @@ function doLogin() {
     return;
   }
 
-  // Checar empresa
   db.ref('empresas').once('value', snap => {
     const empresas = snap.val() || {};
     let found = null;
@@ -1165,6 +1213,17 @@ function doLogin() {
     }
   });
 }
+
+// Auto-preencher login salvo
+window.addEventListener('load', () => {
+  const savedLogin = localStorage.getItem('px_login');
+  const savedPass = localStorage.getItem('px_pass');
+  if (savedLogin) {
+    document.getElementById('login-user').value = savedLogin;
+    document.getElementById('login-pass').value = savedPass || '';
+    document.getElementById('login-lembrar').checked = true;
+  }
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
@@ -1251,7 +1310,7 @@ function listenFirebase() {
   db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
-  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; renderAcompanhamento(); });
+  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; populateAcompFilters(); renderAcompanhamento(); });
   const colPath = currentUser.role === 'empresa'
     ? 'colaboradores/' + currentUser.empresaId
     : 'colaboradores';
@@ -1676,12 +1735,18 @@ function renderMural() {
         <td style="font-size:12px;text-align:center;font-weight:600">${needed}</td>
         <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${linha.hora||'—'}</td>
         <td>${statusCell}</td>
-        <td style="min-width:180px">${nomesAtrib}</td>
-        <td>${btnAtribuir}${currentUser.role==='admin'&&minhasAtribs.length===0?'':''}</td>
+        <td style="min-width:200px">${nomesAtrib}</td>
       </tr>`;
     }).join('');
     const btnEncerrar = currentUser.role === 'admin'
       ? vagasPorData.map(([id]) => `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>`).join('')
+      : '';
+    const vagaIdPrincipal = vagasPorData[0][0];
+    const temVagasAbertas = todasLinhas.some(l => l.atribs.length < (l.linha.qtd||0));
+    const btnIndicar = currentUser.role === 'empresa'
+      ? temVagasAbertas
+        ? `<button class="btn btn-yellow" onclick="openAtribuir('${vagaIdPrincipal}')">👤 Indicar Colaboradores</button>`
+        : `<span class="badge badge-success" style="padding:8px 16px">✓ Todas as vagas preenchidas</span>`
       : '';
     return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
       <div style="background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
@@ -1705,36 +1770,89 @@ function renderMural() {
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Hora</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
               <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Colaboradores</th>
-              <th style="padding:8px 14px;border-bottom:1px solid var(--gray-200)"></th>
             </tr>
           </thead>
           <tbody>${linhasHTML}</tbody>
         </table>
       </div>
-      ${vagasPorData[0]?.[1]?.obs ? `<div style="padding:10px 18px;border-top:1px solid var(--gray-100);font-size:12px;color:var(--gray-400)">📝 ${vagasPorData[0][1].obs}</div>` : ''}
+      <div style="padding:12px 18px;border-top:1px solid var(--gray-100);display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${btnIndicar}
+        ${btnEncerrar}
+        ${vagasPorData[0]?.[1]?.obs ? `<span style="font-size:12px;color:var(--gray-400)">📝 ${vagasPorData[0][1].obs}</span>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
 
-function openAtribuir(vagaId, linhaIdx) {
+function openAtribuir(vagaId) {
   currentAtribuirVagaId = vagaId;
-  currentAtribuirLinhaIdx = linhaIdx;
   const vaga = STATE.vagas[vagaId];
-  const linha = (vaga.linhas || [])[linhaIdx] || {};
-  document.getElementById('atribuir-vaga-info').innerHTML =
-    `<div style="font-weight:600;font-size:14px;margin-bottom:4px">${linha.opNome} — ${linha.funcao}</div>
-     <div style="font-size:12px;color:var(--gray-400)">📅 ${formatDate(vaga.data)} ${vaga.hora ? '• '+vaga.hora : ''} &nbsp;|&nbsp; Centro de Custo: ${linha.opCC}</div>`;
-  populateAtribuirCol();
+  const empId = currentUser.empresaId;
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo');
+  const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
+
+  document.getElementById('atribuir-modal-title').textContent = `Indicar Colaboradores — ${formatDate(vaga.data)}`;
+
+  const linhas = vaga.linhas || [];
+  const painelHTML = linhas.map((linha, li) => {
+    const atribs = Object.values(linha.atribuicoes || {});
+    const filled = atribs.length;
+    const needed = linha.qtd || 0;
+    const completo = filled >= needed;
+    const vagasRestantes = needed - filled;
+
+    // Colaboradores já indicados nesta linha
+    const listaAtribs = atribs.map(a => {
+      const minha = a.empresaId === empId;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${minha?'var(--info-bg)':'var(--gray-50)'};border-radius:var(--radius);margin-bottom:4px;font-size:12px">
+        <span style="font-size:16px">${minha?'👤':'👥'}</span>
+        <span style="font-weight:600">${a.colNome}</span>
+        <span style="color:var(--gray-400)">${a.colCPF}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray-400)">${a.empresaNome}</span>
+      </div>`;
+    }).join('');
+
+    const selectIndicar = !completo ? `
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <select id="col-sel-${li}" style="flex:1;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
+        <button class="btn btn-yellow btn-sm" style="white-space:nowrap" onclick="indicarNaLinha(${li})">
+          Indicar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
+        </button>
+      </div>` : `<div style="margin-top:8px"><span class="badge badge-success">✓ Todas as vagas preenchidas</span></div>`;
+
+    return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="background:var(--navy);color:var(--yellow);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">${linha.opNome}</div>
+        <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
+        <span class="badge badge-navy" style="font-size:10px">${linha.funcao}</span>
+        ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
+        <span style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
+      </div>
+      ${listaAtribs}
+      ${selectIndicar}
+    </div>`;
+  }).join('');
+
+  document.getElementById('atribuir-painel').innerHTML = painelHTML || '<div style="padding:24px;text-align:center;color:var(--gray-400)">Nenhuma linha nesta vaga.</div>';
   openModal('modal-atribuir');
 }
 
-function confirmarAtribuicao() {
-  const colId = v('atribuir-col');
-  if (!colId) { toast('Selecione um colaborador.', 'error'); return; }
+function indicarNaLinha(linhaIdx) {
+  const sel = document.getElementById(`col-sel-${linhaIdx}`);
+  if (!sel || !sel.value) { toast('Selecione um colaborador.', 'error'); return; }
+  const colId = sel.value;
   const empId = currentUser.empresaId;
   const col = (STATE.colaboradores[empId]||{})[colId];
   const vaga = STATE.vagas[currentAtribuirVagaId];
-  const linha = (vaga.linhas || [])[currentAtribuirLinhaIdx] || {};
+  const linha = (vaga.linhas || [])[linhaIdx] || {};
+
+  // Checar se já indicou este colaborador nesta linha
+  const atribs = Object.values(linha.atribuicoes || {});
+  if (atribs.some(a => a.colId === colId)) { toast('Este colaborador já foi indicado para esta vaga.', 'error'); return; }
+
+  // Checar se já completo
+  if (atribs.length >= (linha.qtd || 0)) { toast('Vagas desta linha já estão preenchidas.', 'error'); return; }
+
   const data = {
     colId, colNome: col.nome, colCPF: col.cpf,
     funcao: linha.funcao,
@@ -1743,20 +1861,23 @@ function confirmarAtribuicao() {
     atribuidoEm: Date.now(),
     status: 'Em escolha'
   };
-  db.ref(`vagas/${currentAtribuirVagaId}/linhas/${currentAtribuirLinhaIdx}/atribuicoes`).push(data).then(() => {
+  db.ref(`vagas/${currentAtribuirVagaId}/linhas/${linhaIdx}/atribuicoes`).push(data).then(() => {
     db.ref('acompanhamento').push({
       vagaId: currentAtribuirVagaId,
-      linhaIdx: currentAtribuirLinhaIdx,
+      linhaIdx,
       ...data,
       opNome: linha.opNome,
       opCC: linha.opCC,
       data: vaga.data,
-      horasPrevista: vaga.hora,
+      horaInicial: linha.hora || '',
     });
-    toast('Colaborador indicado com sucesso!', 'success');
-    closeModal('modal-atribuir');
+    toast(`${col.nome} indicado!`, 'success');
+    // Reabrir painel atualizado
+    setTimeout(() => openAtribuir(currentAtribuirVagaId), 400);
   });
 }
+
+function confirmarAtribuicao() {} // legacy — não usado mais
 
 function encerrarVaga(id) {
   if (!confirm('Encerrar esta vaga?')) return;
@@ -1788,34 +1909,59 @@ function renderVagasAdmin() {
 }
 
 // ===================== ACOMPANHAMENTO =====================
+function populateAcompFilters() {
+  const filterData = document.getElementById('filter-data-acomp');
+  const filterOp = document.getElementById('filter-op-acomp');
+  if (!filterData || !filterOp) return;
+
+  // Datas únicas dos registros
+  const datas = [...new Set(Object.values(STATE.acompanhamento).map(a => a.data).filter(Boolean))].sort();
+  const curData = filterData.value;
+  filterData.innerHTML = '<option value="">Todas as datas</option>' + datas.map(d => `<option value="${d}">${formatDate(d)}</option>`).join('');
+  if (curData) filterData.value = curData;
+
+  // Operações
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const curOp = filterOp.value;
+  filterOp.innerHTML = '<option value="">Todas as operações</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+  if (curOp) filterOp.value = curOp;
+}
+
 function renderAcompanhamento() {
   const container = document.getElementById('acomp-container');
   if (!container) return;
-  const filterOp = document.getElementById('filter-op-acomp');
-  const filterOpVal = filterOp ? filterOp.value : '';
+
+  populateAcompFilters();
+
+  const filterDataVal = document.getElementById('filter-data-acomp')?.value || '';
+  const filterOpVal = document.getElementById('filter-op-acomp')?.value || '';
 
   let items = Object.entries(STATE.acompanhamento);
-  if (filterOpVal) items = items.filter(([,a]) => a.vagaId && STATE.vagas[a.vagaId] && STATE.vagas[a.vagaId].opId === filterOpVal);
   if (currentUser.role === 'empresa') items = items.filter(([,a]) => a.empresaId === currentUser.empresaId);
+  if (filterDataVal) items = items.filter(([,a]) => a.data === filterDataVal);
+  if (filterOpVal) {
+    const opNome = (STATE.operacoes[filterOpVal]||{}).nome;
+    if (opNome) items = items.filter(([,a]) => a.opNome === opNome);
+  }
 
   if (!items.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Nenhum registro de acompanhamento.</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Nenhum registro para os filtros selecionados.</div></div>';
     return;
   }
 
-  // Agrupar por vagaId/data/op
-  const grupos = {};
+  // Agrupar por data
+  const porData = {};
   items.forEach(([id, a]) => {
-    const key = (a.vagaId||'') + '_' + (a.data||'');
-    if (!grupos[key]) grupos[key] = { opNome: a.opNome, data: a.data, rows: [] };
-    grupos[key].rows.push([id, a]);
+    const d = a.data || '0000-00-00';
+    if (!porData[d]) porData[d] = [];
+    porData[d].push([id, a]);
   });
 
-  container.innerHTML = Object.values(grupos).map(g => `
-    <div class="acomp-card">
+  container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => `
+    <div class="acomp-card" style="margin-bottom:20px">
       <div class="acomp-header">
-        <div class="acomp-op">⚡ ${g.opNome || '—'}</div>
-        <div class="acomp-meta">📅 ${formatDate(g.data)}</div>
+        <div class="acomp-op">📅 ${formatDate(data)}</div>
+        <div class="acomp-meta">${rows.length} colaborador${rows.length>1?'es':''}</div>
       </div>
       <div class="table-wrap">
         <table class="acomp-table">
@@ -1823,27 +1969,29 @@ function renderAcompanhamento() {
             <tr>
               <th>Colaborador</th>
               <th>Empresa</th>
+              <th>Operação</th>
               <th>Função</th>
+              <th>Hora Prev.</th>
               <th>Chegada</th>
               <th>Refeição</th>
               <th>Saída</th>
-              <th>H. Trabalhadas</th>
+              <th>H. Trab.</th>
               <th>Valor</th>
+              <th>Avaliação</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            ${g.rows.map(([id, a]) => renderAcompRow(id, a)).join('')}
+            ${rows.map(([id, a]) => renderAcompRow(id, a)).join('')}
           </tbody>
         </table>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function renderAcompRow(id, a) {
-  const { hTrab, hTrabalhadasMin, previsaoSaida, valor, classe, displayH } = calcHoras(a);
+  const { displayH, classe, valor } = calcHoras(a);
   const statusBadge = {
     'Em escolha': 'badge-warning',
     'Validada': 'badge-info',
@@ -1852,18 +2000,78 @@ function renderAcompRow(id, a) {
     'Encerrado': 'badge-gray'
   }[a.status] || 'badge-gray';
   const podeEditar = currentUser.role === 'admin' || a.empresaId === currentUser.empresaId;
+
+  // Avaliação
+  const av = a.avaliacao || {};
+  const starsDisplay = [1,2,3,4,5].map(i => `<span style="color:${i<=(av.nota||0)?'var(--yellow)':'var(--gray-200)'}">★</span>`).join('');
+  const avalCell = av.bloqueada
+    ? `<div style="font-size:13px">${starsDisplay}<br><span style="font-size:10px;color:var(--gray-400)">${av.obs||''}</span></div>`
+    : podeEditar
+      ? `<button class="btn btn-ghost btn-sm" onclick="openAvaliacao('${id}')">${av.nota ? starsDisplay : '☆ Avaliar'}</button>`
+      : '—';
+
   return `<tr>
     <td class="td-name">${a.colNome}</td>
     <td style="font-size:12px">${a.empresaNome||'—'}</td>
-    <td><span class="badge badge-navy">${a.funcao||'—'}</span></td>
+    <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+    <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
     <td>${a.chegada||'—'}</td>
     <td>${a.refeicao||'—'}</td>
     <td>${a.saida||'—'}</td>
     <td><span class="${classe}">${displayH}</span></td>
     <td style="font-size:12px;font-weight:600">${valor}</td>
+    <td>${avalCell}</td>
     <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
     <td>${podeEditar ? `<button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>` : '—'}</td>
   </tr>`;
+}
+
+// ===================== AVALIAÇÃO =====================
+let currentAvaliacaoId = null;
+let currentStarVal = 0;
+
+function openAvaliacao(id) {
+  currentAvaliacaoId = id;
+  const a = STATE.acompanhamento[id];
+  const av = a.avaliacao || {};
+  document.getElementById('avaliacao-info').innerHTML =
+    `<div style="font-weight:600">${a.colNome}</div>
+     <div style="font-size:12px;color:var(--gray-400)">${a.opNome} — ${formatDate(a.data)} — ${a.funcao}</div>`;
+  currentStarVal = av.nota || 0;
+  renderStars(currentStarVal);
+  sv('avaliacao-obs', av.obs || '');
+  const bloq = !!av.bloqueada;
+  document.getElementById('avaliacao-bloqueada').style.display = bloq ? 'block' : 'none';
+  document.getElementById('avaliacao-footer').style.display = bloq ? 'none' : 'flex';
+  document.getElementById('avaliacao-obs').readOnly = bloq;
+  document.querySelectorAll('.star').forEach(s => s.style.pointerEvents = bloq ? 'none' : 'auto');
+  openModal('modal-avaliacao');
+}
+
+function setStar(val) {
+  currentStarVal = val;
+  renderStars(val);
+}
+
+function renderStars(val) {
+  document.querySelectorAll('.star').forEach(s => {
+    const sv2 = parseInt(s.dataset.val);
+    s.textContent = sv2 <= val ? '★' : '☆';
+    s.style.color = sv2 <= val ? 'var(--yellow)' : 'var(--gray-200)';
+  });
+}
+
+function salvarAvaliacao() {
+  if (!currentStarVal) { toast('Selecione ao menos 1 estrela.', 'error'); return; }
+  if (!confirm('Após salvar, a avaliação será bloqueada e não poderá ser alterada. Confirmar?')) return;
+  db.ref(`acompanhamento/${currentAvaliacaoId}/avaliacao`).set({
+    nota: currentStarVal,
+    obs: v('avaliacao-obs'),
+    bloqueada: true,
+    avaliadoEm: Date.now(),
+    avaliadoPor: currentUser.login
+  }).then(() => { toast('Avaliação salva e bloqueada!', 'success'); closeModal('modal-avaliacao'); });
 }
 
 function calcHoras(a) {
