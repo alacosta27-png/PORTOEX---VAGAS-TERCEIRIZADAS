@@ -1232,6 +1232,12 @@ tbody tr:hover { background: var(--gray-50); }
             <option value="Encerrado">Encerrado</option>
           </select>
         </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Operação</label>
+          <select id="ae-operacao" style="width:100%" onchange="atualizarFuncaoEdit()">
+            <option value="">— Manter atual —</option>
+          </select>
+        </div>
       </div>
       <div id="ae-preview" style="margin-top:16px;"></div>
       <!-- Campos extras para ROTA -->
@@ -2180,7 +2186,9 @@ function openAtribuir(vagaId) {
   currentAtribuirVagaId = vagaId;
   const vaga = STATE.vagas[vagaId];
   const empId = currentUser.empresaId;
-  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo');
+  const cols = Object.entries(STATE.colaboradores[empId] || {})
+    .filter(([,c]) => (c.status||'ativo') === 'ativo')
+    .sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
   const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
 
   document.getElementById('atribuir-modal-title').textContent = `Indicar Colaboradores — ${formatDate(vaga.data)}`;
@@ -2405,7 +2413,26 @@ function renderAcompanhamento() {
     porData[d].push([id, a]);
   });
 
-  container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => `
+  // Paleta de cores para grupos de operação
+  const OP_CORES = [
+    { bg: '#EEF2FF', border: '#C7D2FE', text: '#3730A3' },
+    { bg: '#FFF7ED', border: '#FED7AA', text: '#9A3412' },
+    { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534' },
+    { bg: '#FDF4FF', border: '#E9D5FF', text: '#6B21A8' },
+    { bg: '#FFF1F2', border: '#FECDD3', text: '#9F1239' },
+    { bg: '#F0F9FF', border: '#BAE6FD', text: '#075985' },
+    { bg: '#FEFCE8', border: '#FEF08A', text: '#713F12' },
+    { bg: '#F7F7F7', border: '#D1D5DB', text: '#374151' },
+  ];
+  // Mapear cada operação única a uma cor
+  const todasOps = [...new Set(items.map(([,a]) => a.opNome||'—'))].sort();
+  const opCorMap = {};
+  todasOps.forEach((op, i) => { opCorMap[op] = OP_CORES[i % OP_CORES.length]; });
+
+  container.innerHTML = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
+    // Ordenar linhas por operação para agrupar visualmente
+    const rowsOrdenados = [...rows].sort(([,a],[,b]) => (a.opNome||'').localeCompare(b.opNome||''));
+    return `
     <div class="acomp-card" style="margin-bottom:20px">
       <div class="acomp-header">
         <div class="acomp-op">📅 ${formatDate(data)}</div>
@@ -2431,15 +2458,18 @@ function renderAcompanhamento() {
             </tr>
           </thead>
           <tbody>
-            ${rows.map(([id, a]) => renderAcompRow(id, a)).join('')}
+            ${rowsOrdenados.map(([id, a]) => renderAcompRow(id, a, opCorMap[a.opNome||'—'])).join('')}
           </tbody>
         </table>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-function renderAcompRow(id, a) {
+function renderAcompRow(id, a, opCor) {
   const { displayH, classe, valor } = calcHoras(a);
+  const corStyle = opCor ? `background:${opCor.bg};` : '';
+  const opBadgeStyle = opCor ? `background:${opCor.bg};color:${opCor.text};border:1px solid ${opCor.border};font-weight:700;` : '';
   const statusBadge = {
     'Em escolha': 'badge-warning',
     'Validada': 'badge-info',
@@ -2479,10 +2509,10 @@ function renderAcompRow(id, a) {
     </div>`;
   }
 
-  return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : ''}">
+  return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
     <td class="td-name">${a.colNome} ${desacordoCell}</td>
     <td style="font-size:12px">${a.empresaNome||'—'}</td>
-    <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+    <td><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;${opBadgeStyle}">${a.opNome||'—'}</span></td>
     <td><span class="badge ${funcaoBadge(a.funcao)}" style="font-size:10px">${a.funcao||'—'}</span></td>
     <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.horaInicial||'—'}</td>
     <td>${a.chegada||'—'}</td>
@@ -2620,6 +2650,17 @@ function populateMotoristaSelect() {
     ativos.map(([id,m]) => `<option value="${id}">${m.nome}${m.ident ? ' — '+m.ident : ''}</option>`).join('');
 }
 
+function atualizarFuncaoEdit() {
+  const sel = document.getElementById('ae-operacao');
+  const opId = sel.value;
+  if (!opId) return;
+  const op = STATE.operacoes[opId] || {};
+  const isRota = (op.cc||'').toUpperCase() === 'ROTA';
+  const rotaWrap = document.getElementById('ae-rota-wrap');
+  rotaWrap.style.display = isRota ? 'block' : 'none';
+  if (isRota) { populateMotoristaSelect(); }
+}
+
 // ===================== ACOMP EDIT (admin) =====================
 function openAcompEdit(id) {
   currentAcompId = id;
@@ -2636,6 +2677,13 @@ function openAcompEdit(id) {
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
+
+  // Popular select de operação
+  const aeOp = document.getElementById('ae-operacao');
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim').sort(([,a],[,b]) => a.nome.localeCompare(b.nome));
+  aeOp.innerHTML = '<option value="">— Manter atual ('+( a.opNome||'?')+') —</option>' +
+    ops.map(([id,op]) => `<option value="${id}" data-nome="${op.nome}" data-cc="${op.cc}" data-funcao="${op.funcao||''}">${op.nome} — ${op.cc}</option>`).join('');
+  aeOp.value = '';
 
   // Campos de ROTA
   const isRota = (a.opCC||'').toUpperCase() === 'ROTA';
@@ -2853,7 +2901,19 @@ function saveAcompEdit() {
     desconto: v('ae-desconto'),
     status: v('ae-status')
   };
-  if (isRota) {
+  // Atualizar operação se foi alterada
+  const novaOpId = v('ae-operacao');
+  if (novaOpId) {
+    const sel = document.getElementById('ae-operacao');
+    const opt = sel.options[sel.selectedIndex];
+    const novaOp = STATE.operacoes[novaOpId] || {};
+    data.opId = novaOpId;
+    data.opNome = opt.dataset.nome || novaOp.nome || '';
+    data.opCC = opt.dataset.cc || novaOp.cc || '';
+    data.funcao = opt.dataset.funcao || novaOp.funcao || getFuncaoByOp(data.opNome);
+  }
+  const usaRota = novaOpId ? (data.opCC||'').toUpperCase() === 'ROTA' : isRota;
+  if (usaRota) {
     const motId = v('ae-motorista');
     data.motoristaId = motId;
     data.motoristaNome = motId && STATE.motoristas[motId] ? STATE.motoristas[motId].nome : '';
@@ -2891,12 +2951,12 @@ function renderResumoAdmin() {
   let items = Object.entries(STATE.acompanhamento);
   if (inicio) items = items.filter(([,a]) => a.data >= inicio);
   if (fim) items = items.filter(([,a]) => a.data <= fim);
-  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
-
-  if (!items.length) {
-    kpisEl.innerHTML = '';
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Nenhum registro para o período selecionado.</div></div>';
-    return;
+  if (empFiltro) {
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
   }
 
   // KPIs globais
@@ -3016,9 +3076,13 @@ function exportarResumoAdmin() {
   let items = Object.entries(STATE.acompanhamento);
   if (inicio) items = items.filter(([,a]) => a.data >= inicio);
   if (fim) items = items.filter(([,a]) => a.data <= fim);
-  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
-
-  const rows = [['Data','Colaborador','CPF','Empresa','Operação','CC','Função','Chegada','Refeição','Saída','H.Trabalhadas','Custo Est.','Status']];
+  if (empFiltro) {
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
   items.forEach(([,a]) => {
     const { displayH, valor } = calcHoras(a);
     rows.push([a.data||'', a.colNome||'', a.colCPF||'', a.empresaNome||'', a.opNome||'', a.opCC||'', a.funcao||'', a.chegada||'', a.refeicao||'', a.saida||'', displayH, valor, a.status||'']);
@@ -3043,7 +3107,14 @@ function gerarAcerto() {
 
   let items = Object.entries(STATE.acompanhamento);
   items = items.filter(([,a]) => a.data >= inicio && a.data <= fim);
-  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
+  if (empFiltro) {
+    // Filtrar por empresaId OU por empresaNome (dados históricos não têm empresaId)
+    const empNomeFiltro = (STATE.empresas[empFiltro]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empFiltro ||
+      (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
 
   acertoDados = items;
   const container = document.getElementById('acerto-container');
@@ -3053,10 +3124,10 @@ function gerarAcerto() {
     return;
   }
 
-  // Agrupa por empresa
+  // Agrupa por empresa — usa empresaId quando existe, senão agrupa por empresaNome (histórico importado)
   const porEmpresa = {};
   items.forEach(([id, a]) => {
-    const eid = a.empresaId || '_sem_empresa';
+    const eid = a.empresaId || ('nome__' + (a.empresaNome||'_sem').toUpperCase().trim());
     if (!porEmpresa[eid]) porEmpresa[eid] = { nome: a.empresaNome || '—', rows: [] };
     porEmpresa[eid].rows.push([id, a]);
   });
