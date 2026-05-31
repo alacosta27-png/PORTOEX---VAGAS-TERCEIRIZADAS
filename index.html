@@ -677,6 +677,10 @@ tbody tr:hover { background: var(--gray-50); }
   from { transform: translateX(20px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
@@ -871,7 +875,77 @@ tbody tr:hover { background: var(--gray-50); }
       </div>
     </div>
 
-    <!-- ===================== PÁGINA: MOTORISTAS ===================== -->
+    <!-- ===================== PÁGINA: RESUMO GERAL ADMIN ===================== -->
+    <div id="page-resumo-admin" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📊 Resumo Geral</div>
+          <div class="section-sub">Visão consolidada por período — horas, colaboradores e custos</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Data Início</label>
+            <input type="date" id="resumo-admin-inicio" onchange="renderResumoAdmin()">
+          </div>
+          <div class="form-group">
+            <label>Data Fim</label>
+            <input type="date" id="resumo-admin-fim" onchange="renderResumoAdmin()">
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="resumo-admin-emp" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px" onchange="renderResumoAdmin()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <button class="btn btn-yellow" onclick="exportarResumoAdmin()">⬇ CSV</button>
+            <button class="btn btn-danger" style="white-space:nowrap" onclick="openZerarPonto()">🗑 Zerar Ponto</button>
+          </div>
+        </div>
+      </div>
+      <div id="resumo-admin-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+      <div id="resumo-admin-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ACERTO TERCEIRIZADOS ===================== -->
+    <div id="page-resumo-terceirizados" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">💰 Modelo de Acerto</div>
+          <div class="section-sub">Resumo por período para pagamento às empresas terceirizadas</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr auto auto;align-items:end;gap:12px">
+          <div class="form-group">
+            <label>Data Início *</label>
+            <input type="date" id="acerto-inicio">
+          </div>
+          <div class="form-group">
+            <label>Data Fim *</label>
+            <input type="date" id="acerto-fim">
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="acerto-emp" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <button class="btn btn-navy" onclick="gerarAcerto()">🔍 Gerar</button>
+          </div>
+          <div>
+            <button class="btn btn-yellow" onclick="exportarAcertoCSV()">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px">💡 Padrão quinzenal (1–15 e 16–fim), mas qualquer intervalo é aceito.</div>
+      </div>
+      <div id="acerto-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – MOTORISTAS ===================== -->
     <div id="page-motoristas" class="page">
       <div class="section-header">
         <div>
@@ -1295,8 +1369,44 @@ tbody tr:hover { background: var(--gray-50); }
   </div>
 </div>
 
+<!-- Modal: Zerar Ponto -->
+<div class="modal-overlay" id="modal-zerar-ponto">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="background:var(--danger)">
+      <div class="modal-title">⚠️ Zerar Acompanhamento de Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-zerar-ponto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--danger-bg);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--danger);margin-bottom:16px;font-weight:500">
+        ⚠️ Esta ação é irreversível. Os registros serão excluídos permanentemente.
+      </div>
+      <div class="form-group">
+        <label>Filtrar por Data (opcional)</label>
+        <input type="date" id="zerar-data">
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Filtrar por Empresa (opcional)</label>
+        <select id="zerar-empresa" style="padding:9px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px;width:100%">
+          <option value="">Todas as empresas</option>
+        </select>
+      </div>
+      <div id="zerar-preview" style="margin-top:14px;padding:12px;background:var(--gray-50);border-radius:var(--radius);font-size:13px;display:none"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label>Senha de confirmação *</label>
+        <input type="password" id="zerar-senha" placeholder="Digite a senha admin">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-zerar-ponto')">Cancelar</button>
+      <button class="btn btn-ghost" onclick="previewZerar()">👁 Pré-visualizar</button>
+      <button class="btn btn-danger" onclick="confirmarZerar()">🗑 Zerar Registros</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px"></div>
+
 <script>
-// ===================== FIREBASE CONFIG =====================
 const firebaseConfig = {
   apiKey: "AIzaSyDsKKZaK1WBo3FjNo-2o0O5a0ehV4tDy4U",
   authDomain: "vagas-terceirizados-portoex.firebaseapp.com",
@@ -1441,6 +1551,8 @@ function buildNavTabs() {
         { id: 'page-mural', label: 'Mural de Vagas' },
         { id: 'page-vagas-admin', label: 'Gerenciar Vagas' },
         { id: 'page-acompanhamento', label: 'Acompanhamento' },
+        { id: 'page-resumo-admin', label: '📊 Resumo Geral' },
+        { id: 'page-resumo-terceirizados', label: '💰 Acerto' },
         { id: 'page-empresas', label: 'Empresas' },
         { id: 'page-operacoes', label: 'Operações' },
         { id: 'page-motoristas', label: 'Motoristas' },
@@ -1482,6 +1594,37 @@ function switchPage(pageId) {
   if (pageId === 'page-operacoes') renderOperacoes();
   if (pageId === 'page-vagas-admin') renderVagasAdmin();
   if (pageId === 'page-motoristas') renderMotoristas();
+  if (pageId === 'page-resumo-admin') {
+    // Set default: current month
+    if (!document.getElementById('resumo-admin-inicio')?.value) {
+      const hoje = new Date();
+      const primDia = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
+      const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+      const ultimoStr = `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth()+1).padStart(2,'0')}-${String(ultimoDia.getDate()).padStart(2,'0')}`;
+      sv('resumo-admin-inicio', primDia);
+      sv('resumo-admin-fim', ultimoStr);
+    }
+    populateResumoSelects();
+    renderResumoAdmin();
+  }
+  if (pageId === 'page-resumo-terceirizados') {
+    // Set default: current quinzena
+    const hoje = new Date();
+    const dia = hoje.getDate();
+    const mes = String(hoje.getMonth()+1).padStart(2,'0');
+    const ano = hoje.getFullYear();
+    if (!document.getElementById('acerto-inicio')?.value) {
+      if (dia <= 15) {
+        sv('acerto-inicio', `${ano}-${mes}-01`);
+        sv('acerto-fim', `${ano}-${mes}-15`);
+      } else {
+        const ultimoDia = new Date(ano, hoje.getMonth()+1, 0).getDate();
+        sv('acerto-inicio', `${ano}-${mes}-16`);
+        sv('acerto-fim', `${ano}-${mes}-${ultimoDia}`);
+      }
+    }
+    populateResumoSelects();
+  }
 }
 
 function switchInner(group, tab) {
@@ -1494,7 +1637,8 @@ function switchInner(group, tab) {
 
 // ===================== FIREBASE LISTENERS =====================
 function listenFirebase() {
-  db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); });
+// Atualiza seleções quando empresas carregarem
+db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects(); });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
   db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
@@ -1881,7 +2025,11 @@ function saveVaga() {
     criadoEm: Date.now()
   };
   const ref = editVagaId ? db.ref('vagas/'+editVagaId) : db.ref('vagas').push();
-  (editVagaId ? ref.set(payload) : ref.set(payload)).then(() => { toast('Mural publicado!','success'); closeModal('modal-vaga'); });
+  (editVagaId ? ref.set(payload) : ref.set(payload)).then(() => {
+    toast('Mural publicado!','success');
+    closeModal('modal-vaga');
+    switchPage('page-mural');
+  });
 }
 
 function renderMural() {
@@ -2025,7 +2173,7 @@ function openAtribuir(vagaId) {
     }).join('');
 
     const selectIndicar = !completo ? `
-      <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
+      <div id="sel-wrap-${li}" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
         <div style="font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Indicar colaborador para esta vaga</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select id="col-sel-${li}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
@@ -2034,7 +2182,7 @@ function openAtribuir(vagaId) {
           </button>
         </div>
         <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função automática: <strong>${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
-      </div>` : `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
+      </div>` : `<div id="sel-wrap-${li}" style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
 
     return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -2042,9 +2190,9 @@ function openAtribuir(vagaId) {
         <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
         <span class="badge badge-navy" style="font-size:10px">${linha.funcao}</span>
         ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
-        <span style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
+        <span id="counter-${li}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
       </div>
-      ${listaAtribs}
+      <div id="lista-atribs-${li}">${listaAtribs}</div>
       ${selectIndicar}
     </div>`;
   }).join('');
@@ -2086,10 +2234,62 @@ function indicarNaLinha(linhaIdx) {
       opCC: linha.opCC,
       data: vaga.data,
       horaInicial: linha.hora || '',
+    }).then(() => {
+      // Feedback visual imediato na lista interna
+      const listaEl = document.getElementById(`lista-atribs-${linhaIdx}`);
+      if (listaEl) {
+        const novoItem = document.createElement('div');
+        novoItem.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--info-bg);border-radius:var(--radius);margin-bottom:4px;font-size:12px;animation:fadeIn 0.3s ease';
+        novoItem.innerHTML = `<span style="font-size:16px">👤</span><span style="font-weight:600">${col.nome}</span><span style="color:var(--gray-400)">${col.cpf}</span><span style="margin-left:auto;font-size:10px;background:var(--success-bg);color:var(--success);padding:2px 8px;border-radius:10px">✓ Indicado agora</span>`;
+        listaEl.appendChild(novoItem);
+      }
+
+      // Atualizar contador e verificar se completo
+      const novaQtd = atribs.length + 1;
+      const needed = linha.qtd || 0;
+      const restantes = needed - novaQtd;
+      const counterEl = document.getElementById(`counter-${linhaIdx}`);
+      if (counterEl) {
+        counterEl.textContent = `${novaQtd}/${needed} preenchidos`;
+        counterEl.style.color = restantes === 0 ? 'var(--success)' : 'var(--warning)';
+      }
+
+      // Atualizar seleção e botão
+      const selWrap = document.getElementById(`sel-wrap-${linhaIdx}`);
+      if (restantes <= 0 && selWrap) {
+        selWrap.innerHTML = `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
+        // Verificar se TODAS as linhas estão completas → fechar modal
+        const todasCompletas = verificarTodasLinhasCompletas();
+        if (todasCompletas) {
+          toast('✓ Todas as vagas preenchidas! Encerrando...', 'success');
+          setTimeout(() => closeModal('modal-atribuir'), 1800);
+        }
+      } else if (selWrap) {
+        // Atualizar texto do botão
+        const btn = selWrap.querySelector('button');
+        if (btn) btn.textContent = `✓ Confirmar (${restantes} vaga${restantes>1?'s':''})`;
+        // Limpar seleção
+        sel.value = '';
+      }
+      toast(`${col.nome} indicado!`, 'success');
     });
-    toast(`${col.nome} indicado!`, 'success');
-    // Reabrir painel atualizado
-    setTimeout(() => openAtribuir(currentAtribuirVagaId), 400);
+  });
+}
+
+function verificarTodasLinhasCompletas() {
+  const vaga = STATE.vagas[currentAtribuirVagaId];
+  if (!vaga) return false;
+  return (vaga.linhas || []).every((linha, li) => {
+    const atribs = Object.values(linha.atribuicoes || {});
+    // Considera também a indicação que acabou de ser feita (ainda não refletida no STATE)
+    const contadores = document.getElementById(`counter-${li}`);
+    if (contadores) {
+      const partes = contadores.textContent.split('/');
+      const preenchidos = parseInt(partes[0]) || 0;
+      const total = parseInt(partes[1]) || 0;
+      return preenchidos >= total && total > 0;
+    }
+    return atribs.length >= (linha.qtd || 0) && (linha.qtd || 0) > 0;
   });
 }
 
@@ -2631,7 +2831,328 @@ function saveAcompEdit() {
 }
 
 // ===================== UTILS =====================
-function updateNotifBadge() {
+// ===================== POPULATE ACERTO/RESUMO SELECTS =====================
+function populateResumoSelects() {
+  const emps = Object.entries(STATE.empresas).filter(([,e]) => e.status === 'ativa');
+  const opts = '<option value="">Todas</option>' + emps.map(([id,e]) => `<option value="${id}">${e.nome}</option>`).join('');
+  const selRA = document.getElementById('resumo-admin-emp');
+  if (selRA) selRA.innerHTML = opts;
+  const selAE = document.getElementById('acerto-emp');
+  if (selAE) selAE.innerHTML = opts;
+  const selZE = document.getElementById('zerar-empresa');
+  if (selZE) selZE.innerHTML = '<option value="">Todas as empresas</option>' + emps.map(([id,e]) => `<option value="${id}">${e.nome}</option>`).join('');
+}
+
+// ===================== RESUMO GERAL ADMIN =====================
+function renderResumoAdmin() {
+  const container = document.getElementById('resumo-admin-container');
+  const kpisEl = document.getElementById('resumo-admin-kpis');
+  if (!container || !kpisEl) return;
+
+  const inicio = document.getElementById('resumo-admin-inicio')?.value || '';
+  const fim = document.getElementById('resumo-admin-fim')?.value || '';
+  const empFiltro = document.getElementById('resumo-admin-emp')?.value || '';
+
+  let items = Object.entries(STATE.acompanhamento);
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim) items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
+
+  if (!items.length) {
+    kpisEl.innerHTML = '';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Nenhum registro para o período selecionado.</div></div>';
+    return;
+  }
+
+  // KPIs globais
+  let totalColabs = items.length;
+  let totalHorasMin = 0;
+  let totalValor = 0;
+  let totalHE = 0;
+  items.forEach(([,a]) => {
+    if (a.chegada && a.saida) {
+      const chegMin = timeToMin(a.chegada);
+      const saidaMin = timeToMin(a.saida);
+      const refMin = timeToMin(a.refeicao || '01:00');
+      const trabMin = saidaMin - chegMin - refMin;
+      totalHorasMin += trabMin;
+      const heMin = Math.max(0, trabMin - 8*60);
+      totalHE += heMin;
+      const { valor } = calcHoras(a);
+      const v2 = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalValor += v2;
+    }
+  });
+
+  const datas = [...new Set(items.map(([,a]) => a.data).filter(Boolean))];
+  kpisEl.innerHTML = [
+    { label: 'Colaboradores', val: totalColabs, icon: '👥' },
+    { label: 'Dias de Trabalho', val: datas.length, icon: '📅' },
+    { label: 'Total Horas', val: minToHM(totalHorasMin), icon: '⏱️' },
+    { label: 'Horas Extras', val: minToHM(totalHE), icon: '⚡' },
+    { label: 'Custo Total', val: `R$ ${totalValor.toFixed(2).replace('.',',')}`, icon: '💰' },
+  ].map(k => `
+    <div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;text-align:center">
+      <div style="font-size:24px;margin-bottom:6px">${k.icon}</div>
+      <div style="font-size:20px;font-weight:700;color:var(--navy)">${k.val}</div>
+      <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">${k.label}</div>
+    </div>`).join('');
+
+  // Agrupa por data → por colaborador
+  const porData = {};
+  items.forEach(([id, a]) => {
+    if (!porData[a.data]) porData[a.data] = [];
+    porData[a.data].push([id, a]);
+  });
+
+  // Resumo por Operação/CC
+  const porOp = {};
+  items.forEach(([,a]) => {
+    const key = `${a.opNome||'—'}|${a.opCC||'—'}`;
+    if (!porOp[key]) porOp[key] = { opNome: a.opNome||'—', opCC: a.opCC||'—', cols: 0, horasMin: 0, valor: 0 };
+    porOp[key].cols++;
+    if (a.chegada && a.saida) {
+      const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+      porOp[key].horasMin += t;
+      const { valor } = calcHoras(a);
+      porOp[key].valor += parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+    }
+  });
+
+  const tabelaOp = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">📋 Resumo por Operação / Centro de Custo</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Centro de Custo</th><th>Colaboradores</th><th>H. Trabalhadas</th><th>Custo Est.</th></tr></thead>
+          <tbody>
+            ${Object.values(porOp).sort((a,b)=>a.opNome.localeCompare(b.opNome)).map(op => `<tr>
+              <td class="td-name">${op.opNome}</td>
+              <td><span class="badge badge-info">${op.opCC}</span></td>
+              <td style="text-align:center;font-weight:600">${op.cols}</td>
+              <td style="font-family:'JetBrains Mono',monospace">${minToHM(op.horasMin)}</td>
+              <td style="font-weight:600;color:var(--success)">R$ ${op.valor.toFixed(2).replace('.',',')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // Detalhamento por data
+  const tabelaDia = Object.entries(porData).sort(([a],[b]) => b.localeCompare(a)).map(([data, rows]) => {
+    let totalDia = 0;
+    const tbody = rows.map(([,a]) => {
+      const { displayH, valor } = calcHoras(a);
+      const v2 = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalDia += v2;
+      return `<tr>
+        <td class="td-name">${a.colNome}</td>
+        <td style="font-size:12px">${a.empresaNome||'—'}</td>
+        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+        <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
+        <td style="font-weight:600">R$ ${parseFloat(valor.replace('R$ ','').replace(',','.') || 0).toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="acomp-card" style="margin-bottom:16px">
+      <div class="acomp-header" style="display:flex;justify-content:space-between">
+        <div class="acomp-op">📅 ${formatDate(data)}</div>
+        <div class="acomp-meta">${rows.length} colaboradores &nbsp;|&nbsp; R$ ${totalDia.toFixed(2).replace('.',',')}</div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr>
+          <th>Colaborador</th><th>Empresa</th><th>Operação</th><th>Função</th>
+          <th>Chegada</th><th>Saída</th><th>Refeição</th><th>H. Trab.</th><th>Custo Est.</th>
+        </tr></thead><tbody>${tbody}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = tabelaOp + tabelaDia;
+}
+
+function exportarResumoAdmin() {
+  const inicio = document.getElementById('resumo-admin-inicio')?.value || '';
+  const fim = document.getElementById('resumo-admin-fim')?.value || '';
+  const empFiltro = document.getElementById('resumo-admin-emp')?.value || '';
+  let items = Object.entries(STATE.acompanhamento);
+  if (inicio) items = items.filter(([,a]) => a.data >= inicio);
+  if (fim) items = items.filter(([,a]) => a.data <= fim);
+  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
+
+  const rows = [['Data','Colaborador','CPF','Empresa','Operação','CC','Função','Chegada','Refeição','Saída','H.Trabalhadas','Custo Est.','Status']];
+  items.forEach(([,a]) => {
+    const { displayH, valor } = calcHoras(a);
+    rows.push([a.data||'', a.colNome||'', a.colCPF||'', a.empresaNome||'', a.opNome||'', a.opCC||'', a.funcao||'', a.chegada||'', a.refeicao||'', a.saida||'', displayH, valor, a.status||'']);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `resumo-geral-${inicio||'tudo'}-${fim||''}.csv`;
+  a.click();
+}
+
+// ===================== ACERTO TERCEIRIZADOS =====================
+let acertoDados = [];
+
+function gerarAcerto() {
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+  if (!inicio || !fim) { toast('Selecione data início e fim.', 'error'); return; }
+  if (inicio > fim) { toast('Data início deve ser anterior ao fim.', 'error'); return; }
+  const empFiltro = v('acerto-emp');
+
+  let items = Object.entries(STATE.acompanhamento);
+  items = items.filter(([,a]) => a.data >= inicio && a.data <= fim);
+  if (empFiltro) items = items.filter(([,a]) => a.empresaId === empFiltro);
+
+  acertoDados = items;
+  const container = document.getElementById('acerto-container');
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div><div class="empty-text">Nenhum registro encontrado para o período.</div></div>';
+    return;
+  }
+
+  // Agrupa por empresa
+  const porEmpresa = {};
+  items.forEach(([id, a]) => {
+    const eid = a.empresaId || '_sem_empresa';
+    if (!porEmpresa[eid]) porEmpresa[eid] = { nome: a.empresaNome || '—', rows: [] };
+    porEmpresa[eid].rows.push([id, a]);
+  });
+
+  container.innerHTML = Object.entries(porEmpresa).map(([eid, emp]) => {
+    let totalEmp = 0;
+    let totalHMin = 0;
+    let totalHE = 0;
+    const tbodyRows = emp.rows.map(([,a]) => {
+      const { displayH, valor } = calcHoras(a);
+      const vNum = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      totalEmp += vNum;
+      if (a.chegada && a.saida) {
+        const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+        totalHMin += t;
+        totalHE += Math.max(0, t - 8*60);
+      }
+      return `<tr>
+        <td>${formatDate(a.data)}</td>
+        <td class="td-name">${a.colNome}</td>
+        <td class="td-mono">${a.colCPF||'—'}</td>
+        <td style="font-size:12px;font-weight:600">${a.opNome||'—'}</td>
+        <td><span class="badge badge-navy" style="font-size:10px">${a.funcao||'—'}</span></td>
+        <td>${a.chegada||'—'}</td>
+        <td>${a.saida||'—'}</td>
+        <td>${a.refeicao||'—'}</td>
+        <td><span class="${a.chegada&&a.saida?'horas-ok':''}">${displayH}</span></td>
+        <td style="font-weight:600;text-align:right">R$ ${vNum.toFixed(2).replace('.',',')}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin-bottom:0">🏢 ${emp.nome}</div>
+        <div style="display:flex;gap:16px;font-size:13px">
+          <div><span style="color:var(--gray-400)">H. Trab.:</span> <strong>${minToHM(totalHMin)}</strong></div>
+          <div><span style="color:var(--gray-400)">H. Extra:</span> <strong style="color:var(--orange)">${minToHM(totalHE)}</strong></div>
+          <div style="background:var(--success-bg);color:var(--success);padding:4px 14px;border-radius:20px;font-weight:700">TOTAL: R$ ${totalEmp.toFixed(2).replace('.',',')}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-bottom:10px">Período: ${formatDate(inicio)} a ${formatDate(fim)} &nbsp;|&nbsp; ${emp.rows.length} registros</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody>${tbodyRows}</tbody>
+          <tfoot><tr style="background:var(--success-bg)">
+            <td colspan="9" style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">TOTAL ${emp.nome}</td>
+            <td style="text-align:right;font-weight:700;padding:10px 14px;color:var(--success)">R$ ${totalEmp.toFixed(2).replace('.',',')}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportarAcertoCSV() {
+  if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
+  const inicio = v('acerto-inicio');
+  const fim = v('acerto-fim');
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Valor Dia','Valor HE','Total']];
+  acertoDados.forEach(([,a]) => {
+    const emp = STATE.empresas[a.empresaId] || {};
+    const valores = (emp.valores || {})[a.funcao] || {};
+    let hTrabMin = 0, heMin = 0, valorTotal = parseFloat(valores.valor) || 0;
+    if (a.chegada && a.saida) {
+      hTrabMin = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
+      heMin = Math.max(0, hTrabMin - 8*60);
+      if (heMin > 0) valorTotal += (heMin/60) * (parseFloat(valores.he) || 0);
+    }
+    rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
+      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin),
+      `R$ ${(parseFloat(valores.valor)||0).toFixed(2).replace('.',',')}`,
+      `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
+      `R$ ${valorTotal.toFixed(2).replace('.',',')}`]);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement('a');
+  a2.href = url; a2.download = `acerto-${inicio}-${fim}.csv`;
+  a2.click();
+}
+
+// ===================== ZERAR PONTO =====================
+function openZerarPonto() {
+  populateResumoSelects();
+  sv('zerar-data', '');
+  sv('zerar-empresa', '');
+  sv('zerar-senha', '');
+  const prev = document.getElementById('zerar-preview');
+  if (prev) prev.style.display = 'none';
+  openModal('modal-zerar-ponto');
+}
+
+function previewZerar() {
+  const data = v('zerar-data');
+  const empresa = v('zerar-empresa');
+  let items = Object.entries(STATE.acompanhamento);
+  if (data) items = items.filter(([,a]) => a.data === data);
+  if (empresa) items = items.filter(([,a]) => a.empresaId === empresa);
+  const prev = document.getElementById('zerar-preview');
+  prev.style.display = 'block';
+  if (!items.length) {
+    prev.innerHTML = '<span style="color:var(--gray-400)">Nenhum registro encontrado com os filtros selecionados.</span>';
+    return;
+  }
+  const empNome = empresa ? (STATE.empresas[empresa]||{}).nome || empresa : 'Todas as empresas';
+  prev.innerHTML = `<strong style="color:var(--danger)">⚠️ ${items.length} registros serão excluídos</strong><br>
+    <span style="font-size:12px;color:var(--gray-600)">
+      ${data ? '📅 Data: ' + formatDate(data) : '📅 Todas as datas'} &nbsp;|&nbsp; 🏢 ${empNome}
+    </span>`;
+}
+
+function confirmarZerar() {
+  const senha = v('zerar-senha');
+  if (senha !== ADMIN_SENHA) { toast('Senha incorreta.', 'error'); return; }
+  const data = v('zerar-data');
+  const empresa = v('zerar-empresa');
+  let items = Object.entries(STATE.acompanhamento);
+  if (data) items = items.filter(([,a]) => a.data === data);
+  if (empresa) items = items.filter(([,a]) => a.empresaId === empresa);
+  if (!items.length) { toast('Nenhum registro encontrado.', 'error'); return; }
+  if (!confirm(`Excluir ${items.length} registros de ponto? Esta ação não pode ser desfeita.`)) return;
+  const updates = {};
+  items.forEach(([id]) => { updates['acompanhamento/' + id] = null; });
+  db.ref().update(updates).then(() => {
+    toast(`${items.length} registros zerados com sucesso.`, 'success');
+    closeModal('modal-zerar-ponto');
+  });
+}
+
+
   const pendentes = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.dataset.page === 'page-acompanhamento') {
