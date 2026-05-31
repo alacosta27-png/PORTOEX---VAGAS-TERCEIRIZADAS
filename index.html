@@ -1238,6 +1238,21 @@ tbody tr:hover { background: var(--gray-50); }
             <option value="">— Manter atual —</option>
           </select>
         </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>🗓️ Adicional Sábado / Domingo / Feriado</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--gray-200);font-size:13px;font-weight:500;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-nenhum" value="nenhum" style="margin-right:6px" checked> Nenhum
+            </label>
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid #FED7AA;background:#FFF7ED;color:#9A3412;font-size:13px;font-weight:600;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-50" value="50" style="margin-right:6px"> +50% (Sábado)
+            </label>
+            <label class="check-item" style="cursor:pointer;padding:8px 16px;border-radius:var(--radius);border:1px solid #FECDD3;background:#FFF1F2;color:#9F1239;font-size:13px;font-weight:600;user-select:none">
+              <input type="radio" name="ae-adicional" id="ae-adicional-100" value="100" style="margin-right:6px"> +100% (Dom/Feriado)
+            </label>
+          </div>
+          <div id="ae-adicional-preview" style="margin-top:8px;font-size:12px;color:var(--gray-400)"></div>
+        </div>
       </div>
       <div id="ae-preview" style="margin-top:16px;"></div>
       <!-- Campos extras para ROTA -->
@@ -2509,6 +2524,13 @@ function renderAcompRow(id, a, opCor) {
     </div>`;
   }
 
+  const adicional = parseInt(a.adicional) || 0;
+  const adicionalBadge = adicional === 100
+    ? `<span style="font-size:9px;background:#FFF1F2;color:#9F1239;border:1px solid #FECDD3;border-radius:3px;padding:1px 5px;margin-left:4px;font-weight:700">+100%</span>`
+    : adicional === 50
+    ? `<span style="font-size:9px;background:#FFF7ED;color:#9A3412;border:1px solid #FED7AA;border-radius:3px;padding:1px 5px;margin-left:4px;font-weight:700">+50%</span>`
+    : '';
+
   return `<tr style="${temDesacordoPendente && currentUser.role==='admin' ? 'background:var(--warning-bg)' : corStyle}">
     <td class="td-name">${a.colNome} ${desacordoCell}</td>
     <td style="font-size:12px">${a.empresaNome||'—'}</td>
@@ -2519,7 +2541,7 @@ function renderAcompRow(id, a, opCor) {
     <td>${a.refeicao||'—'}</td>
     <td>${a.saida||'—'}</td>
     <td><span class="${classe}">${displayH}</span></td>
-    <td style="font-size:12px;font-weight:600">${valor}</td>
+    <td style="font-size:12px;font-weight:600">${valor}${adicionalBadge}</td>
     <td>${avalCell}</td>
     <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
     <td>${acoes}</td>
@@ -2574,7 +2596,7 @@ function salvarAvaliacao() {
 }
 
 function calcHoras(a) {
-  if (!a.chegada || !a.saida) return { hTrab: null, displayH: '—', classe: '', valor: '—' };
+  if (!a.chegada || !a.saida) return { hTrab: null, displayH: '—', classe: '', valor: '—', valorNum: 0 };
   const chegMin = timeToMin(a.chegada);
   const saidaMin = timeToMin(a.saida);
   const refMin = timeToMin(a.refeicao || '01:00');
@@ -2583,13 +2605,21 @@ function calcHoras(a) {
   const heMin = Math.max(0, totalMin - joHorasMin);
   const negMin = totalMin < joHorasMin ? joHorasMin - totalMin : 0;
 
-  const emp = currentUser.role === 'empresa' ? STATE.empresas[a.empresaId] : (STATE.empresas[a.empresaId] || {});
+  const emp = STATE.empresas[a.empresaId] || {};
   const valores = (emp.valores || {})[a.funcao] || {};
   const valorDia = parseFloat(valores.valor) || 0;
   const valorHE = parseFloat(valores.he) || 0;
+
   let valorTotal = valorDia;
   if (heMin > 0) valorTotal += (heMin / 60) * valorHE;
   if (negMin > 0 && a.desconto === 'sim') valorTotal -= (negMin / 60) * valorHE;
+
+  // Adicional sábado/domingo/feriado
+  const adicional = parseInt(a.adicional) || 0;
+  let valorAdicional = 0;
+  if (adicional === 50)  valorAdicional = valorDia * 0.50;
+  if (adicional === 100) valorAdicional = valorDia * 1.00;
+  valorTotal += valorAdicional;
 
   let classe = '';
   if (totalMin >= joHorasMin + 1) classe = 'horas-over';
@@ -2597,8 +2627,9 @@ function calcHoras(a) {
   else classe = 'horas-ok';
 
   const displayH = minToHM(totalMin) + (heMin > 0 ? ` (+${minToHM(heMin)})` : negMin > 0 ? ` (-${minToHM(negMin)})` : '');
-  const valorStr = valorTotal > 0 ? `R$ ${valorTotal.toFixed(2).replace('.',',')}` : '—';
-  return { displayH, classe, valor: valorStr };
+  const adicionalStr = adicional > 0 ? ` +${adicional}%` : '';
+  const valorStr = valorTotal > 0 ? `R$ ${valorTotal.toFixed(2).replace('.',',')}${adicionalStr}` : '—';
+  return { displayH, classe, valor: valorStr, valorNum: valorTotal, valorAdicional };
 }
 
 function timeToMin(t) {
@@ -2650,6 +2681,23 @@ function populateMotoristaSelect() {
     ativos.map(([id,m]) => `<option value="${id}">${m.nome}${m.ident ? ' — '+m.ident : ''}</option>`).join('');
 }
 
+function updateAdicionalPreview() {
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const adicionalSel = document.querySelector('input[name="ae-adicional"]:checked');
+  const adicional = parseInt(adicionalSel?.value) || 0;
+  const emp = STATE.empresas[a.empresaId] || {};
+  const valores = (emp.valores || {})[a.funcao] || {};
+  const valorDia = parseFloat(valores.valor) || 0;
+  const previewEl = document.getElementById('ae-adicional-preview');
+  if (!previewEl) return;
+  if (!adicional || !valorDia) { previewEl.innerHTML = ''; return; }
+  const extra = valorDia * (adicional / 100);
+  previewEl.innerHTML = `<span style="color:${adicional===100?'var(--danger)':'var(--warning)'};font-weight:600">
+    Adicional de ${adicional}%: + R$ ${extra.toFixed(2).replace('.',',')}
+    <span style="color:var(--gray-400);font-weight:400"> sobre R$ ${valorDia.toFixed(2).replace('.',',')} (valor/dia)</span>
+  </span>`;
+}
+
 function atualizarFuncaoEdit() {
   const sel = document.getElementById('ae-operacao');
   const opId = sel.value;
@@ -2677,6 +2725,13 @@ function openAcompEdit(id) {
   sv('ae-saida', a.saida||'');
   sv('ae-desconto', a.desconto||'nao');
   sv('ae-status', a.status||'Em escolha');
+
+  // Carregar adicional
+  const adicionalVal = String(a.adicional || 'nenhum');
+  document.querySelectorAll('input[name="ae-adicional"]').forEach(r => {
+    r.checked = r.value === adicionalVal;
+  });
+  updateAdicionalPreview();
 
   // Popular select de operação
   const aeOp = document.getElementById('ae-operacao');
@@ -2763,6 +2818,7 @@ document.addEventListener('change', e => {
   if (e.target.id === 'sug-refeicao') {
     document.getElementById('sug-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
   }
+  if (e.target.name === 'ae-adicional') { updateAdicionalPreview(); updateAcompPreview(); }
   if (['ae-chegada','ae-refeicao','ae-saida','ae-ref-manual','ae-desconto'].includes(e.target.id)) updateAcompPreview();
   if (['sug-chegada','sug-refeicao','sug-saida','sug-ref-manual'].includes(e.target.id)) updateSugPreview();
 });
@@ -2873,17 +2929,21 @@ function updateAcompPreview() {
   const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
   const saida = v('ae-saida');
   const desconto = v('ae-desconto');
-  const mock = { ...a, chegada, refeicao: refVal, saida, desconto };
+  const adicional = parseInt(document.querySelector('input[name="ae-adicional"]:checked')?.value) || 0;
+  const mock = { ...a, chegada, refeicao: refVal, saida, desconto, adicional };
   const { displayH, classe, valor } = calcHoras(mock);
   if (!chegada) { document.getElementById('ae-preview').innerHTML = ''; return; }
   const jornada = 8 * 60;
-  const totalMin = chegada && saida ? timeToMin(saida) - timeToMin(chegada) - timeToMin(refVal||'01:00') : null;
   const prev = chegada && refVal ? minToHM(timeToMin(chegada) + jornada + timeToMin(refVal||'01:00')) : '—';
+  const adicionalLabel = adicional > 0
+    ? `<div><div style="color:var(--gray-400)">Adicional</div><div style="font-weight:600;color:${adicional===100?'var(--danger)':'var(--warning)'}">+${adicional}%</div></div>`
+    : '';
   document.getElementById('ae-preview').innerHTML = `
-    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(${adicional>0?4:3},1fr);gap:10px;font-size:12px">
       <div><div style="color:var(--gray-400)">Previsão de Saída</div><div style="font-weight:600">${prev}</div></div>
       <div><div style="color:var(--gray-400)">H. Trabalhadas</div><div class="${classe}" style="font-weight:600">${displayH||'—'}</div></div>
-      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600">${valor}</div></div>
+      ${adicionalLabel}
+      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600;color:var(--success)">${valor}</div></div>
     </div>`;
 }
 
@@ -2899,7 +2959,8 @@ function saveAcompEdit() {
     refeicao: refVal,
     saida: v('ae-saida'),
     desconto: v('ae-desconto'),
-    status: v('ae-status')
+    status: v('ae-status'),
+    adicional: parseInt(document.querySelector('input[name="ae-adicional"]:checked')?.value) || 0
   };
   // Atualizar operação se foi alterada
   const novaOpId = v('ae-operacao');
@@ -3186,20 +3247,26 @@ function exportarAcertoCSV() {
   if (!acertoDados.length) { toast('Gere o acerto primeiro.', 'error'); return; }
   const inicio = v('acerto-inicio');
   const fim = v('acerto-fim');
-  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Valor Dia','Valor HE','Total']];
+  const rows = [['Empresa','Data','Colaborador','CPF','Operação','Centro de Custo','Função','Chegada','Refeição','Saída','H.Trabalhadas','H.Extra','Adicional','Valor Dia','Valor HE','Valor Adicional','Total']];
   acertoDados.forEach(([,a]) => {
     const emp = STATE.empresas[a.empresaId] || {};
     const valores = (emp.valores || {})[a.funcao] || {};
-    let hTrabMin = 0, heMin = 0, valorTotal = parseFloat(valores.valor) || 0;
+    const valorDia = parseFloat(valores.valor) || 0;
+    let hTrabMin = 0, heMin = 0, valorTotal = valorDia;
     if (a.chegada && a.saida) {
       hTrabMin = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
       heMin = Math.max(0, hTrabMin - 8*60);
       if (heMin > 0) valorTotal += (heMin/60) * (parseFloat(valores.he) || 0);
     }
+    const adicional = parseInt(a.adicional) || 0;
+    const valorAdicional = valorDia * (adicional / 100);
+    valorTotal += valorAdicional;
+    const adicionalStr = adicional > 0 ? `+${adicional}%` : '—';
     rows.push([a.empresaNome||'', a.data||'', a.colNome||'', a.colCPF||'', a.opNome||'', a.opCC||'', a.funcao||'',
-      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin),
-      `R$ ${(parseFloat(valores.valor)||0).toFixed(2).replace('.',',')}`,
+      a.chegada||'', a.refeicao||'', a.saida||'', minToHM(hTrabMin), minToHM(heMin), adicionalStr,
+      `R$ ${valorDia.toFixed(2).replace('.',',')}`,
       `R$ ${(parseFloat(valores.he)||0).toFixed(2).replace('.',',')}`,
+      adicional > 0 ? `R$ ${valorAdicional.toFixed(2).replace('.',',')}` : '—',
       `R$ ${valorTotal.toFixed(2).replace('.',',')}`]);
   });
   const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
@@ -3247,16 +3314,22 @@ function exportarAcertoPDF() {
   let totalColabs = acertoDados.length;
 
   const empresasHTML = Object.entries(porEmpresa).map(([,emp]) => {
-    let totalEmp = 0, totalHMin = 0, totalHE = 0;
+    let totalEmp = 0, totalHMin = 0, totalHE = 0, totalAdicional = 0;
     const rows = emp.rows.map(a => {
-      const { displayH, valor } = calcHoras(a);
-      const vNum = parseFloat(valor.replace('R$ ','').replace(',','.')) || 0;
+      const { displayH, valorNum, valorAdicional } = calcHoras(a);
+      const vNum = valorNum || 0;
+      const vAd = valorAdicional || 0;
       totalEmp += vNum;
+      totalAdicional += vAd;
       if (a.chegada && a.saida) {
         const t = timeToMin(a.saida) - timeToMin(a.chegada) - timeToMin(a.refeicao||'01:00');
         totalHMin += t;
         totalHE += Math.max(0, t - 8*60);
       }
+      const adicional = parseInt(a.adicional) || 0;
+      const adicionalCell = adicional > 0
+        ? `<span style="background:${adicional===100?'#FFF1F2':'#FFF7ED'};color:${adicional===100?'#9F1239':'#9A3412'};padding:1px 5px;border-radius:3px;font-weight:700;font-size:9px">+${adicional}%</span>`
+        : '—';
       return `<tr>
         <td>${formatDate(a.data)}</td>
         <td>${a.colNome||'—'}</td>
@@ -3267,16 +3340,18 @@ function exportarAcertoPDF() {
         <td>${a.saida||'—'}</td>
         <td>${a.refeicao||'—'}</td>
         <td>${displayH}</td>
+        <td style="text-align:center">${adicionalCell}</td>
         <td style="text-align:right;font-weight:bold">R$ ${vNum.toFixed(2).replace('.',',')}</td>
       </tr>`;
     }).join('');
     totalGeral += totalEmp;
+    const adLine = totalAdicional > 0 ? ` &nbsp;|&nbsp; Adicional: R$ ${totalAdicional.toFixed(2).replace('.',',')}` : '';
     return `<h2>🏢 ${emp.nome}</h2>
-      <div class="periodo">${emp.rows.length} colaboradores &nbsp;|&nbsp; H. Trabalhadas: ${minToHM(totalHMin)} &nbsp;|&nbsp; H. Extra: ${minToHM(totalHE)}</div>
+      <div class="periodo">${emp.rows.length} colaboradores &nbsp;|&nbsp; H. Trabalhadas: ${minToHM(totalHMin)} &nbsp;|&nbsp; H. Extra: ${minToHM(totalHE)}${adLine}</div>
       <table>
-        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Valor</th></tr></thead>
+        <thead><tr><th>Data</th><th>Colaborador</th><th>CPF</th><th>Operação</th><th>Função</th><th>Chegada</th><th>Saída</th><th>Refeição</th><th>H.Trab.</th><th>Adic.</th><th>Valor</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr class="total-row"><td colspan="9" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
+        <tfoot><tr class="total-row"><td colspan="10" style="text-align:right">TOTAL ${emp.nome}</td><td style="text-align:right">R$ ${totalEmp.toFixed(2).replace('.',',')}</td></tr></tfoot>
       </table>`;
   }).join('');
 
