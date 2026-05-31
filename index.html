@@ -410,8 +410,7 @@ tbody tr:hover { background: var(--gray-50); }
 
 /* ===== MURAL ===== */
 .mural-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: block;
   gap: 16px;
 }
 .mural-card {
@@ -957,17 +956,13 @@ tbody tr:hover { background: var(--gray-50); }
 
 <!-- Modal: Nova Vaga -->
 <div class="modal-overlay" id="modal-vaga">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:860px">
     <div class="modal-header">
-      <div class="modal-title">Publicar Vaga no Mural</div>
+      <div class="modal-title">Publicar Mural de Vagas</div>
       <button class="modal-close" onclick="closeModal('modal-vaga')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Operação *</label>
-          <select id="vaga-op"></select>
-        </div>
+      <div class="form-grid" style="grid-template-columns:auto auto 1fr;gap:14px;align-items:end;">
         <div class="form-group">
           <label>Data de Trabalho *</label>
           <input type="date" id="vaga-data">
@@ -976,42 +971,45 @@ tbody tr:hover { background: var(--gray-50); }
           <label>Horário Previsto</label>
           <input type="time" id="vaga-hora">
         </div>
-      </div>
-      <div style="margin-top:14px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Funções Necessárias</label>
-        <div class="func-grid">
-          <div class="func-box">
-            <div class="func-box-title">Ajudante Interno</div>
-            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-ai" min="0" value="0"></div>
-          </div>
-          <div class="func-box">
-            <div class="func-box-title">Ajudante Externo</div>
-            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-ae" min="0" value="0"></div>
-          </div>
-          <div class="func-box">
-            <div class="func-box-title">Conferente</div>
-            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-co" min="0" value="0"></div>
-          </div>
+        <div class="form-group">
+          <label>Direcionar para Empresas</label>
+          <div class="check-group" id="vaga-empresas-check" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;"></div>
         </div>
       </div>
-      <div style="margin-top:14px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Direcionar para Empresas</label>
-        <div class="check-group" id="vaga-empresas-check"></div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Deixar em branco = todas as empresas ativas visualizam.</div>
+      <div style="margin-top:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;">Linhas de Vaga</label>
+          <button class="btn btn-ghost btn-sm" onclick="addVagaLinha()">+ Adicionar linha</button>
+        </div>
+        <div class="table-wrap">
+          <table id="vaga-linhas-table">
+            <thead>
+              <tr>
+                <th style="width:36px">#</th>
+                <th>Operação</th>
+                <th>Função</th>
+                <th style="width:80px">Qtd</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="vaga-linhas-body"></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">Deixar Qtd = 0 oculta a linha no mural.</div>
       </div>
       <div class="form-group" style="margin-top:14px;">
-        <label>Observações</label>
-        <textarea id="vaga-obs" placeholder="Informações adicionais..."></textarea>
+        <label>Observações gerais</label>
+        <textarea id="vaga-obs" placeholder="Informações adicionais..." style="min-height:60px"></textarea>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-vaga')">Cancelar</button>
-      <button class="btn btn-navy" onclick="saveVaga()">Publicar Vaga</button>
+      <button class="btn btn-navy" onclick="saveVaga()">Publicar Mural</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Atribuir Colaborador à Vaga -->
+<!-- Modal: Atribuir Colaborador à linha de vaga -->
 <div class="modal-overlay" id="modal-atribuir">
   <div class="modal">
     <div class="modal-header">
@@ -1021,14 +1019,6 @@ tbody tr:hover { background: var(--gray-50); }
     <div class="modal-body">
       <div id="atribuir-vaga-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
       <div class="form-group">
-        <label>Função que irá atender *</label>
-        <select id="atribuir-funcao">
-          <option value="Ajudante Interno">Ajudante Interno</option>
-          <option value="Ajudante Externo">Ajudante Externo</option>
-          <option value="Conferente">Conferente</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-top:12px;">
         <label>Colaborador *</label>
         <select id="atribuir-col">
           <option value="">Selecione um colaborador...</option>
@@ -1538,11 +1528,19 @@ function populateAtribuirCol() {
 }
 
 // ===================== VAGAS =====================
+// ---- VAGA LINHAS (novo modelo) ----
+let vagaLinhas = [];
+let vagaLinhaCounter = 0;
+let currentAtribuirLinhaIdx = null;
+
 function populateVagaModal() {
-  populateOpSelects();
   populateVagaEmpresasCheck();
   const hoje = new Date().toISOString().split('T')[0];
   if (!v('vaga-data')) sv('vaga-data', hoje);
+  vagaLinhas = [];
+  vagaLinhaCounter = 0;
+  // Adiciona 15 linhas vazias por padrão
+  for (let i = 0; i < 15; i++) addVagaLinha();
 }
 
 function populateVagaEmpresasCheck() {
@@ -1553,36 +1551,75 @@ function populateVagaEmpresasCheck() {
   ).join('');
 }
 
+function addVagaLinha() {
+  const idx = vagaLinhaCounter++;
+  vagaLinhas.push({ idx, opId: '', funcao: '', qtd: 0 });
+  renderVagaLinhas();
+}
+
+function removeVagaLinha(idx) {
+  vagaLinhas = vagaLinhas.filter(l => l.idx !== idx);
+  renderVagaLinhas();
+}
+
+function renderVagaLinhas() {
+  const tbody = document.getElementById('vaga-linhas-body');
+  if (!tbody) return;
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const opOpts = '<option value="">— Operação —</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome} / ${op.cc}</option>`).join('');
+  tbody.innerHTML = vagaLinhas.map((l, i) => `
+    <tr>
+      <td style="color:var(--gray-400);font-size:12px">${i+1}</td>
+      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].opId=this.value">${opOpts.replace(`value="${l.opId}"`,`value="${l.opId}" selected`)}</select></td>
+      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].funcao=this.value">
+        <option value="">— Função —</option>
+        <option value="Ajudante Interno" ${l.funcao==='Ajudante Interno'?'selected':''}>Ajudante Interno</option>
+        <option value="Ajudante Externo" ${l.funcao==='Ajudante Externo'?'selected':''}>Ajudante Externo</option>
+        <option value="Conferente" ${l.funcao==='Conferente'?'selected':''}>Conferente</option>
+      </select></td>
+      <td><input type="number" min="0" value="${l.qtd}" style="width:70px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${vagaLinhas.indexOf(l)}].qtd=parseInt(this.value)||0"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeVagaLinha(${l.idx})" style="padding:4px 8px">✕</button></td>
+    </tr>`).join('');
+}
+
 function saveVaga() {
-  const opId = v('vaga-op'), data = v('vaga-data'), hora = v('vaga-hora');
-  if (!opId || !data) { toast('Selecione operação e data.', 'error'); return; }
-  const op = STATE.operacoes[opId] || {};
+  const data = v('vaga-data'), hora = v('vaga-hora');
+  if (!data) { toast('Informe a data de trabalho.', 'error'); return; }
+  // Lê os selects diretamente do DOM para pegar valores atuais
+  const rows = document.querySelectorAll('#vaga-linhas-body tr');
+  const linhas = [];
+  rows.forEach((row, i) => {
+    const sels = row.querySelectorAll('select');
+    const inp = row.querySelector('input[type=number]');
+    const opId = sels[0] ? sels[0].value : '';
+    const funcao = sels[1] ? sels[1].value : '';
+    const qtd = inp ? parseInt(inp.value)||0 : 0;
+    if (opId && funcao && qtd > 0) {
+      const op = STATE.operacoes[opId] || {};
+      linhas.push({ opId, opNome: op.nome, opCC: op.cc, funcao, qtd, atribuicoes: {} });
+    }
+  });
+  if (!linhas.length) { toast('Preencha ao menos uma linha com operação, função e quantidade > 0.', 'error'); return; }
   const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
-  const data2 = {
-    opId, opNome: op.nome, opCC: op.cc,
+  const payload = {
     data, hora,
-    qtd: {
-      'Ajudante Interno': parseInt(v('vaga-qtd-ai'))||0,
-      'Ajudante Externo': parseInt(v('vaga-qtd-ae'))||0,
-      'Conferente': parseInt(v('vaga-qtd-co'))||0
-    },
+    linhas,
     empresasAlvo: empsSel.length ? empsSel : null,
     obs: v('vaga-obs'),
     status: 'aberta',
-    criadoEm: Date.now(),
-    atribuicoes: {}
+    criadoEm: Date.now()
   };
   const ref = editVagaId ? db.ref('vagas/'+editVagaId) : db.ref('vagas').push();
-  (editVagaId ? ref.set(data2) : ref.set(data2)).then(() => { toast('Vaga publicada!','success'); closeModal('modal-vaga'); });
+  (editVagaId ? ref.set(payload) : ref.set(payload)).then(() => { toast('Mural publicado!','success'); closeModal('modal-vaga'); });
 }
 
 function renderMural() {
   const grid = document.getElementById('mural-grid');
   if (!grid) return;
-  const vagas = Object.entries(STATE.vagas).filter(([,v]) => {
-    if (v.status === 'encerrada') return false;
+  const vagas = Object.entries(STATE.vagas).filter(([,vaga]) => {
+    if (vaga.status === 'encerrada') return false;
     if (currentUser.role === 'empresa') {
-      if (v.empresasAlvo && !v.empresasAlvo.includes(currentUser.empresaId)) return false;
+      if (vaga.empresasAlvo && !vaga.empresasAlvo.includes(currentUser.empresaId)) return false;
     }
     return true;
   });
@@ -1590,79 +1627,122 @@ function renderMural() {
     grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">Nenhuma vaga publicada no momento.</div></div>';
     return;
   }
-  grid.innerHTML = vagas.map(([id, vaga]) => {
-    const atribs = Object.values(vaga.atribuicoes || {});
-    const totalNec = (vaga.qtd['Ajudante Interno']||0) + (vaga.qtd['Ajudante Externo']||0) + (vaga.qtd['Conferente']||0);
-    const totalAtrib = atribs.length;
-    const pct = totalNec ? Math.min(100, Math.round(totalAtrib / totalNec * 100)) : 0;
-    const isMinhaAtrib = atribs.some(a => a.empresaId === currentUser.empresaId);
-    const statusBadge = vaga.status === 'aberta'
-      ? '<span class="badge badge-success">Aberta</span>'
-      : '<span class="badge badge-warning">Em andamento</span>';
-    const btnAtribuir = currentUser.role === 'empresa'
-      ? `<button class="btn btn-yellow btn-sm" onclick="openAtribuir('${id}')">Indicar Colaborador</button>`
-      : '';
+  // Agrupa por data
+  const porData = {};
+  vagas.forEach(([id, vaga]) => {
+    const d = vaga.data || '0000-00-00';
+    if (!porData[d]) porData[d] = [];
+    porData[d].push([id, vaga]);
+  });
+  grid.style.display = 'block';
+  grid.innerHTML = Object.entries(porData).sort(([a],[b])=>a.localeCompare(b)).map(([data, vagasData]) => {
+    const vagasPorData = vagasData;
+    // Coleta todas as linhas de todas as vagas nessa data
+    let todasLinhas = [];
+    vagasPorData.forEach(([vagaId, vaga]) => {
+      const hora = vaga.hora || '';
+      (vaga.linhas || []).forEach((linha, li) => {
+        const atribs = Object.values(linha.atribuicoes || {});
+        const minhasAtribs = atribs.filter(a => a.empresaId === currentUser.empresaId);
+        todasLinhas.push({ vagaId, vagaHora: hora, linha, li, atribs, minhasAtribs, vagaStatus: vaga.status });
+      });
+    });
+    const hora = vagasPorData[0]?.[1]?.hora || '';
+    const totalNec = todasLinhas.reduce((s,l) => s + (l.linha.qtd||0), 0);
+    const totalAtrib = todasLinhas.reduce((s,l) => s + l.atribs.length, 0);
+    const pct = totalNec ? Math.min(100, Math.round(totalAtrib/totalNec*100)) : 0;
+    const linhasHTML = todasLinhas.map(({ vagaId, linha, li, atribs, minhasAtribs }) => {
+      const filled = atribs.length;
+      const needed = linha.qtd || 0;
+      const ok = filled >= needed;
+      const minhaInd = minhasAtribs.length > 0;
+      const btnAtribuir = currentUser.role === 'empresa' && !ok
+        ? `<button class="btn btn-yellow btn-sm" style="padding:3px 10px;font-size:11px" onclick="openAtribuir('${vagaId}',${li})">Indicar</button>`
+        : '';
+      const statusCell = ok
+        ? `<span class="badge badge-success" style="font-size:10px">✓ Completo</span>`
+        : minhaInd
+          ? `<span class="badge badge-info" style="font-size:10px">✓ Indicado</span>`
+          : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
+      return `<tr>
+        <td style="font-weight:600;font-size:12px">${linha.opNome||'—'}</td>
+        <td><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
+        <td style="font-size:12px">${linha.funcao||'—'}</td>
+        <td style="font-size:12px;text-align:center">${needed}</td>
+        <td>${statusCell}</td>
+        <td>${btnAtribuir}${currentUser.role==='admin'?`<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`:''}</td>
+      </tr>`;
+    }).join('');
     const btnEncerrar = currentUser.role === 'admin'
-      ? `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>` : '';
-    return `<div class="mural-card">
-      <div class="mural-card-header">
+      ? vagasPorData.map(([id]) => `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>`).join('')
+      : '';
+    return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
+      <div style="background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div class="mural-op-name">⚡ ${vaga.opNome}</div>
-          <div class="mural-date">📅 ${formatDate(vaga.data)} ${vaga.hora ? '• '+vaga.hora : ''}</div>
+          <div style="color:var(--yellow);font-size:15px;font-weight:700">📅 ${formatDate(data)}</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:2px">${hora ? '⏰ Horário previsto: '+hora : ''} &nbsp; ${todasLinhas.length} operações &nbsp; ${totalAtrib}/${totalNec} preenchidos</div>
         </div>
-        ${statusBadge}
-      </div>
-      <div class="mural-body">
-        <div class="mural-row"><span class="mural-label">Centro de Custo</span><span class="mural-value">${vaga.opCC}</span></div>
-        <div class="mural-row"><span class="mural-label">Aj. Interno</span><span class="mural-value">${vaga.qtd['Ajudante Interno']||0} vaga(s)</span></div>
-        <div class="mural-row"><span class="mural-label">Aj. Externo</span><span class="mural-value">${vaga.qtd['Ajudante Externo']||0} vaga(s)</span></div>
-        <div class="mural-row"><span class="mural-label">Conferente</span><span class="mural-value">${vaga.qtd['Conferente']||0} vaga(s)</span></div>
-        ${vaga.obs ? `<div class="mural-row"><span class="mural-label">Obs</span><span class="mural-value" style="font-size:11px">${vaga.obs}</span></div>` : ''}
-        <div class="mural-status">
-          <span style="font-size:12px;color:var(--gray-400)">Preenchimento</span>
-          <span style="font-size:12px;font-weight:600">${totalAtrib}/${totalNec}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="background:rgba(255,255,255,0.1);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--white)">${pct}%</div>
+          ${btnEncerrar}
         </div>
-        <div class="mural-progress"><div class="mural-progress-bar" style="width:${pct}%"></div></div>
       </div>
-      <div class="mural-footer">
-        ${btnAtribuir}
-        ${btnEncerrar}
-        ${isMinhaAtrib ? '<span class="badge badge-info">✓ Indicação enviada</span>' : ''}
+      <div style="padding:0">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--gray-50)">
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Operação</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">C. Custo</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Função</th>
+              <th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Qtd</th>
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;border-bottom:1px solid var(--gray-200)">Status</th>
+              <th style="padding:8px 14px;border-bottom:1px solid var(--gray-200)"></th>
+            </tr>
+          </thead>
+          <tbody>${linhasHTML}</tbody>
+        </table>
       </div>
+      ${vagasPorData[0]?.[1]?.obs ? `<div style="padding:10px 18px;border-top:1px solid var(--gray-100);font-size:12px;color:var(--gray-400)">📝 ${vagasPorData[0][1].obs}</div>` : ''}
     </div>`;
   }).join('');
 }
 
-function openAtribuir(vagaId) {
+function openAtribuir(vagaId, linhaIdx) {
   currentAtribuirVagaId = vagaId;
+  currentAtribuirLinhaIdx = linhaIdx;
   const vaga = STATE.vagas[vagaId];
+  const linha = (vaga.linhas || [])[linhaIdx] || {};
   document.getElementById('atribuir-vaga-info').innerHTML =
-    `<strong>${vaga.opNome}</strong> — ${formatDate(vaga.data)} ${vaga.hora||''}<br>
-     <span style="color:var(--gray-400);font-size:12px">Selecione a função e o colaborador que irá atender.</span>`;
+    `<div style="font-weight:600;font-size:14px;margin-bottom:4px">${linha.opNome} — ${linha.funcao}</div>
+     <div style="font-size:12px;color:var(--gray-400)">📅 ${formatDate(vaga.data)} ${vaga.hora ? '• '+vaga.hora : ''} &nbsp;|&nbsp; Centro de Custo: ${linha.opCC}</div>`;
   populateAtribuirCol();
   openModal('modal-atribuir');
 }
 
 function confirmarAtribuicao() {
-  const colId = v('atribuir-col'), funcao = v('atribuir-funcao');
+  const colId = v('atribuir-col');
   if (!colId) { toast('Selecione um colaborador.', 'error'); return; }
   const empId = currentUser.empresaId;
   const col = (STATE.colaboradores[empId]||{})[colId];
+  const vaga = STATE.vagas[currentAtribuirVagaId];
+  const linha = (vaga.linhas || [])[currentAtribuirLinhaIdx] || {};
   const data = {
     colId, colNome: col.nome, colCPF: col.cpf,
-    funcao, empresaId: empId,
+    funcao: linha.funcao,
+    empresaId: empId,
     empresaNome: currentUser.empresaNome,
     atribuidoEm: Date.now(),
     status: 'Em escolha'
   };
-  db.ref(`vagas/${currentAtribuirVagaId}/atribuicoes`).push(data).then(() => {
-    // Criar registro de acompanhamento
+  db.ref(`vagas/${currentAtribuirVagaId}/linhas/${currentAtribuirLinhaIdx}/atribuicoes`).push(data).then(() => {
     db.ref('acompanhamento').push({
       vagaId: currentAtribuirVagaId,
+      linhaIdx: currentAtribuirLinhaIdx,
       ...data,
-      opNome: STATE.vagas[currentAtribuirVagaId].opNome,
-      data: STATE.vagas[currentAtribuirVagaId].data,
-      horasPrevista: STATE.vagas[currentAtribuirVagaId].hora,
+      opNome: linha.opNome,
+      opCC: linha.opCC,
+      data: vaga.data,
+      horasPrevista: vaga.hora,
     });
     toast('Colaborador indicado com sucesso!', 'success');
     closeModal('modal-atribuir');
