@@ -3350,6 +3350,7 @@ function exportarResumoAdmin() {
       (!a.empresaId && empNomeFiltro && a.empresaNome && a.empresaNome.trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
     );
   }
+  const rows = [['Data','Colaborador','CPF','Empresa','Operação','CC','Função','Chegada','Refeição','Saída','H.Trabalhadas','Custo Est.','Status']];
   items.forEach(([,a]) => {
     const { displayH, valor } = calcHoras(a);
     rows.push([a.data||'', a.colNome||'', a.colCPF||'', a.empresaNome||'', a.opNome||'', a.opCC||'', a.funcao||'', a.chegada||'', a.refeicao||'', a.saida||'', displayH, valor, a.status||'']);
