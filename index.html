@@ -2166,10 +2166,11 @@ function renderMural() {
       ? vagasPorData.map(([id]) => `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>`).join('')
       : '';
     const vagaIdPrincipal = vagasPorData[0][0];
+    const todosVagaIds = vagasPorData.map(([id]) => id).join(',');
     const temVagasAbertas = todasLinhas.some(l => l.atribs.length < (l.linha.qtd||0));
     const btnIndicar = currentUser.role === 'empresa'
       ? temVagasAbertas
-        ? `<button class="btn btn-yellow" onclick="openAtribuir('${vagaIdPrincipal}')">👤 Indicar Colaboradores</button>`
+        ? `<button class="btn btn-yellow" onclick="openAtribuir('${todosVagaIds}')">👤 Indicar Colaboradores</button>`
         : `<span class="badge badge-success" style="padding:8px 16px">✓ Todas as vagas preenchidas</span>`
       : '';
     return `<div style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);margin-bottom:20px;overflow:hidden">
@@ -2208,26 +2209,40 @@ function renderMural() {
   }).join('');
 }
 
-function openAtribuir(vagaId) {
-  currentAtribuirVagaId = vagaId;
-  const vaga = STATE.vagas[vagaId];
+function openAtribuir(vagaIdsStr) {
+  // Suporta múltiplos vagaIds separados por vírgula (várias vagas no mesmo dia)
+  const vagaIds = vagaIdsStr.split(',').filter(Boolean);
+  currentAtribuirVagaId = vagaIds[0]; // mantém compatibilidade
+
   const empId = currentUser.empresaId;
   const cols = Object.entries(STATE.colaboradores[empId] || {})
     .filter(([,c]) => (c.status||'ativo') === 'ativo')
     .sort(([,a],[,b]) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
   const colOpts = '<option value="">— Selecione —</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} (${c.cpf})</option>`).join('');
 
-  document.getElementById('atribuir-modal-title').textContent = `Indicar Colaboradores — ${formatDate(vaga.data)}`;
+  // Coletar todas as linhas de todas as vagas do dia
+  const todasLinhas = [];
+  vagaIds.forEach(vagaId => {
+    const vaga = STATE.vagas[vagaId];
+    if (!vaga) return;
+    (vaga.linhas || []).forEach((linha, li) => {
+      todasLinhas.push({ vagaId, vaga, linha, li });
+    });
+  });
 
-  const linhas = vaga.linhas || [];
-  const painelHTML = linhas.map((linha, li) => {
+  const primeiraVaga = STATE.vagas[vagaIds[0]];
+  document.getElementById('atribuir-modal-title').textContent = `Indicar Colaboradores — ${formatDate(primeiraVaga?.data||'')}`;
+
+  // Índice global para IDs únicos no DOM (evita conflito quando mesma linha aparece em vagas diferentes)
+  let globalIdx = 0;
+  const painelHTML = todasLinhas.map(({ vagaId, vaga, linha, li }) => {
+    const gIdx = globalIdx++;
     const atribs = Object.values(linha.atribuicoes || {});
     const filled = atribs.length;
     const needed = linha.qtd || 0;
     const completo = filled >= needed;
     const vagasRestantes = needed - filled;
 
-    // Colaboradores já indicados nesta linha
     const listaAtribs = atribs.map(a => {
       const minha = a.empresaId === empId;
       return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${minha?'var(--info-bg)':'var(--gray-50)'};border-radius:var(--radius);margin-bottom:4px;font-size:12px">
@@ -2239,16 +2254,16 @@ function openAtribuir(vagaId) {
     }).join('');
 
     const selectIndicar = !completo ? `
-      <div id="sel-wrap-${li}" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
+      <div id="sel-wrap-${gIdx}" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
         <div style="font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Indicar colaborador para esta vaga</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="col-sel-${li}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
-          <button class="btn btn-yellow" style="white-space:nowrap" onclick="indicarNaLinha(${li})">
+          <select id="col-sel-${gIdx}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
+          <button class="btn btn-yellow" style="white-space:nowrap" onclick="indicarNaLinha(${gIdx},'${vagaId}',${li})">
             ✓ Confirmar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
           </button>
         </div>
         <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função automática: <strong>${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
-      </div>` : `<div id="sel-wrap-${li}" style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
+      </div>` : `<div id="sel-wrap-${gIdx}" style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
 
     return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -2256,9 +2271,9 @@ function openAtribuir(vagaId) {
         <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
         <span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${linha.funcao}</span>
         ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
-        <span id="counter-${li}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
+        <span id="counter-${gIdx}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
       </div>
-      <div id="lista-atribs-${li}">${listaAtribs}</div>
+      <div id="lista-atribs-${gIdx}">${listaAtribs}</div>
       ${selectIndicar}
     </div>`;
   }).join('');
@@ -2267,20 +2282,18 @@ function openAtribuir(vagaId) {
   openModal('modal-atribuir');
 }
 
-function indicarNaLinha(linhaIdx) {
-  const sel = document.getElementById(`col-sel-${linhaIdx}`);
+function indicarNaLinha(gIdx, vagaId, linhaIdx) {
+  const sel = document.getElementById(`col-sel-${gIdx}`);
   if (!sel || !sel.value) { toast('Selecione um colaborador.', 'error'); return; }
   const colId = sel.value;
   const empId = currentUser.empresaId;
   const col = (STATE.colaboradores[empId]||{})[colId];
-  const vaga = STATE.vagas[currentAtribuirVagaId];
+  const vaga = STATE.vagas[vagaId];
   const linha = (vaga.linhas || [])[linhaIdx] || {};
 
   // Checar se já indicou este colaborador nesta linha
   const atribs = Object.values(linha.atribuicoes || {});
   if (atribs.some(a => a.colId === colId)) { toast('Este colaborador já foi indicado para esta vaga.', 'error'); return; }
-
-  // Checar se já completo
   if (atribs.length >= (linha.qtd || 0)) { toast('Vagas desta linha já estão preenchidas.', 'error'); return; }
 
   const data = {
@@ -2291,9 +2304,9 @@ function indicarNaLinha(linhaIdx) {
     atribuidoEm: Date.now(),
     status: 'Em escolha'
   };
-  db.ref(`vagas/${currentAtribuirVagaId}/linhas/${linhaIdx}/atribuicoes`).push(data).then(() => {
+  db.ref(`vagas/${vagaId}/linhas/${linhaIdx}/atribuicoes`).push(data).then(() => {
     db.ref('acompanhamento').push({
-      vagaId: currentAtribuirVagaId,
+      vagaId,
       linhaIdx,
       ...data,
       opNome: linha.opNome,
@@ -2301,40 +2314,33 @@ function indicarNaLinha(linhaIdx) {
       data: vaga.data,
       horaInicial: linha.hora || '',
     }).then(() => {
-      // Feedback visual imediato na lista interna
-      const listaEl = document.getElementById(`lista-atribs-${linhaIdx}`);
+      // Feedback visual — usa gIdx para os IDs do DOM
+      const listaEl = document.getElementById(`lista-atribs-${gIdx}`);
       if (listaEl) {
         const novoItem = document.createElement('div');
         novoItem.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--info-bg);border-radius:var(--radius);margin-bottom:4px;font-size:12px;animation:fadeIn 0.3s ease';
         novoItem.innerHTML = `<span style="font-size:16px">👤</span><span style="font-weight:600">${col.nome}</span><span style="color:var(--gray-400)">${col.cpf}</span><span style="margin-left:auto;font-size:10px;background:var(--success-bg);color:var(--success);padding:2px 8px;border-radius:10px">✓ Indicado agora</span>`;
         listaEl.appendChild(novoItem);
       }
-
-      // Atualizar contador e verificar se completo
       const novaQtd = atribs.length + 1;
       const needed = linha.qtd || 0;
       const restantes = needed - novaQtd;
-      const counterEl = document.getElementById(`counter-${linhaIdx}`);
+      const counterEl = document.getElementById(`counter-${gIdx}`);
       if (counterEl) {
         counterEl.textContent = `${novaQtd}/${needed} preenchidos`;
         counterEl.style.color = restantes === 0 ? 'var(--success)' : 'var(--warning)';
       }
-
-      // Atualizar seleção e botão
-      const selWrap = document.getElementById(`sel-wrap-${linhaIdx}`);
+      const selWrap = document.getElementById(`sel-wrap-${gIdx}`);
       if (restantes <= 0 && selWrap) {
         selWrap.innerHTML = `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
-        // Verificar se TODAS as linhas estão completas → fechar modal
         const todasCompletas = verificarTodasLinhasCompletas();
         if (todasCompletas) {
           toast('✓ Todas as vagas preenchidas! Encerrando...', 'success');
           setTimeout(() => closeModal('modal-atribuir'), 1800);
         }
       } else if (selWrap) {
-        // Atualizar texto do botão
         const btn = selWrap.querySelector('button');
         if (btn) btn.textContent = `✓ Confirmar (${restantes} vaga${restantes>1?'s':''})`;
-        // Limpar seleção
         sel.value = '';
       }
       toast(`${col.nome} indicado!`, 'success');
@@ -2343,19 +2349,14 @@ function indicarNaLinha(linhaIdx) {
 }
 
 function verificarTodasLinhasCompletas() {
-  const vaga = STATE.vagas[currentAtribuirVagaId];
-  if (!vaga) return false;
-  return (vaga.linhas || []).every((linha, li) => {
-    const atribs = Object.values(linha.atribuicoes || {});
-    // Considera também a indicação que acabou de ser feita (ainda não refletida no STATE)
-    const contadores = document.getElementById(`counter-${li}`);
-    if (contadores) {
-      const partes = contadores.textContent.split('/');
-      const preenchidos = parseInt(partes[0]) || 0;
-      const total = parseInt(partes[1]) || 0;
-      return preenchidos >= total && total > 0;
-    }
-    return atribs.length >= (linha.qtd || 0) && (linha.qtd || 0) > 0;
+  // Verifica todos os contadores visíveis no modal
+  const contadores = document.querySelectorAll('[id^="counter-"]');
+  if (!contadores.length) return false;
+  return Array.from(contadores).every(el => {
+    const partes = el.textContent.split('/');
+    const preenchidos = parseInt(partes[0]) || 0;
+    const total = parseInt(partes[1]) || 0;
+    return total > 0 && preenchidos >= total;
   });
 }
 
