@@ -954,6 +954,15 @@ tbody tr:hover { background: var(--gray-50); }
           </select>
         </div>
         <div class="form-group">
+          <label>Função padrão</label>
+          <select id="op-funcao">
+            <option value="">Automático pelo C. Custo</option>
+            <option value="Ajudante Interno">Ajudante Interno</option>
+            <option value="Ajudante Externo">Ajudante Externo</option>
+            <option value="Conferente">Conferente</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Ativa</label>
           <select id="op-ativa">
             <option value="sim">Sim</option>
@@ -997,8 +1006,8 @@ tbody tr:hover { background: var(--gray-50); }
             <thead>
               <tr>
                 <th style="width:32px">#</th>
-                <th>Operação</th>
-                <th>Função</th>
+                <th>Operação — Função automática</th>
+                <th style="width:100px">Função</th>
                 <th style="width:65px">Qtd</th>
                 <th style="width:110px">Hora Inicial</th>
                 <th style="width:36px"></th>
@@ -1163,16 +1172,33 @@ const ADMIN_LOGIN = 'portoex.admin';
 const ADMIN_SENHA = 'admin@2024';
 
 // ===================== OPERAÇÕES PADRÃO =====================
+// Mapa fixo: operação → função automática
+const OP_FUNCAO_MAP = {
+  'ROTA':     'Ajudante Externo',
+  'ESTOQUE':  'Ajudante Interno',
+  'BRAFT':    'Ajudante Externo',
+  'SAMSONITE':'Ajudante Externo',
+  'MATTEL':   'Ajudante Interno',
+  'MANOBRA':  'Ajudante Externo',
+  'THOMPSON': 'Ajudante Externo',
+  'S.K.O':    'Ajudante Externo',
+  'N/D':      'Ajudante Interno',
+};
+
+function getFuncaoByOp(opNome) {
+  return OP_FUNCAO_MAP[opNome] || 'Ajudante Externo';
+}
+
 const OPERACOES_PADRAO = [
-  { nome: 'ROTA', cc: 'ROTA' },
-  { nome: 'ESTOQUE', cc: 'EXPEDIÇÃO' },
-  { nome: 'BRAFT', cc: 'ROTA' },
-  { nome: 'SAMSONITE', cc: 'ROTA' },
-  { nome: 'MATTEL', cc: 'EXPEDIÇÃO' },
-  { nome: 'MANOBRA', cc: 'ROTA' },
-  { nome: 'THOMPSON', cc: 'ROTA' },
-  { nome: 'S.K.O', cc: 'ROTA' },
-  { nome: 'N/D', cc: 'EXPEDIÇÃO' },
+  { nome: 'ROTA',     cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'ESTOQUE',  cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'BRAFT',    cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'SAMSONITE',cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'MATTEL',   cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
+  { nome: 'MANOBRA',  cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'THOMPSON', cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'S.K.O',    cc: 'ROTA',      funcao: 'Ajudante Externo' },
+  { nome: 'N/D',      cc: 'EXPEDIÇÃO', funcao: 'Ajudante Interno' },
 ];
 
 // ===================== LOGIN =====================
@@ -1329,7 +1355,15 @@ function initOperacoesPadrao() {
   db.ref('operacoes').once('value', snap => {
     if (!snap.val()) {
       OPERACOES_PADRAO.forEach(op => {
-        db.ref('operacoes').push({ nome: op.nome, cc: op.cc, ativa: 'sim' });
+        db.ref('operacoes').push({ nome: op.nome, cc: op.cc, funcao: op.funcao, ativa: 'sim' });
+      });
+    } else {
+      // Atualiza funcao nas operações existentes que não têm o campo
+      const ops = snap.val();
+      Object.entries(ops).forEach(([id, op]) => {
+        if (!op.funcao && OP_FUNCAO_MAP[op.nome]) {
+          db.ref(`operacoes/${id}/funcao`).set(OP_FUNCAO_MAP[op.nome]);
+        }
       });
     }
   });
@@ -1437,7 +1471,9 @@ function renderOperacoes() {
 function saveOperacao() {
   const nome = v('op-nome'), cc = v('op-cc'), ativa = v('op-ativa');
   if (!nome) { toast('Informe o nome da operação.', 'error'); return; }
-  db.ref('operacoes').push({ nome, cc, ativa }).then(() => { toast('Operação salva!', 'success'); closeModal('modal-operacao'); sv('op-nome',''); });
+  const funcaoManual = v('op-funcao');
+  const funcao = funcaoManual || OP_FUNCAO_MAP[nome.toUpperCase()] || (cc === 'EXPEDIÇÃO' ? 'Ajudante Interno' : 'Ajudante Externo');
+  db.ref('operacoes').push({ nome, cc, funcao, ativa }).then(() => { toast('Operação salva!', 'success'); closeModal('modal-operacao'); sv('op-nome',''); sv('op-funcao',''); });
 }
 
 function toggleOp(id, ativa) {
@@ -1622,18 +1658,26 @@ function renderVagaLinhas() {
   const tbody = document.getElementById('vaga-linhas-body');
   if (!tbody) return;
   const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
-  const opOpts = '<option value="">— Operação —</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome} / ${op.cc}</option>`).join('');
+  const opOpts = '<option value="">— Operação —</option>' + ops.map(([id,op]) => {
+    const funcao = op.funcao || getFuncaoByOp(op.nome);
+    return `<option value="${id}">${op.nome} — ${funcao}</option>`;
+  }).join('');
   tbody.innerHTML = vagaLinhas.map((l, i) => {
     const li = vagaLinhas.indexOf(l);
+    // Derivar função do select atual
+    const opAtual = l.opId ? (STATE.operacoes[l.opId] || {}) : {};
+    const funcaoLabel = opAtual.funcao || (opAtual.nome ? getFuncaoByOp(opAtual.nome) : '');
     return `<tr>
       <td style="color:var(--gray-400);font-size:12px;text-align:center">${i+1}</td>
-      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].opId=this.value">${opOpts.replace(`value="${l.opId}"`,`value="${l.opId}" selected`)}</select></td>
-      <td><select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].funcao=this.value">
-        <option value="">— Função —</option>
-        <option value="Ajudante Interno" ${l.funcao==='Ajudante Interno'?'selected':''}>Ajudante Interno</option>
-        <option value="Ajudante Externo" ${l.funcao==='Ajudante Externo'?'selected':''}>Ajudante Externo</option>
-        <option value="Conferente" ${l.funcao==='Conferente'?'selected':''}>Conferente</option>
-      </select></td>
+      <td>
+        <select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px"
+          onchange="vagaLinhas[${li}].opId=this.value; renderVagaLinhas()">
+          ${opOpts.replace(`value="${l.opId}"`, `value="${l.opId}" selected`)}
+        </select>
+      </td>
+      <td style="font-size:12px;font-weight:500;color:var(--navy);white-space:nowrap;padding:0 10px">
+        ${funcaoLabel ? `<span class="badge badge-navy" style="font-size:10px">${funcaoLabel}</span>` : '<span style="color:var(--gray-400)">—</span>'}
+      </td>
       <td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>
       <td><input type="time" value="${l.hora||''}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].hora=this.value"></td>
       <td><button class="btn btn-danger btn-sm" onclick="removeVagaLinha(${l.idx})" style="padding:4px 8px">✕</button></td>
@@ -1647,18 +1691,18 @@ function saveVaga() {
   const rows = document.querySelectorAll('#vaga-linhas-body tr');
   const linhas = [];
   rows.forEach(row => {
-    const sels = row.querySelectorAll('select');
+    const sel = row.querySelector('select');
     const inps = row.querySelectorAll('input');
-    const opId = sels[0] ? sels[0].value : '';
-    const funcao = sels[1] ? sels[1].value : '';
+    const opId = sel ? sel.value : '';
     const qtd = inps[0] ? parseInt(inps[0].value)||0 : 0;
     const hora = inps[1] ? inps[1].value : '';
-    if (opId && funcao && qtd > 0) {
+    if (opId && qtd > 0) {
       const op = STATE.operacoes[opId] || {};
+      const funcao = op.funcao || getFuncaoByOp(op.nome);
       linhas.push({ opId, opNome: op.nome, opCC: op.cc, funcao, qtd, hora, atribuicoes: {} });
     }
   });
-  if (!linhas.length) { toast('Preencha ao menos uma linha com operação, função e quantidade > 0.', 'error'); return; }
+  if (!linhas.length) { toast('Preencha ao menos uma linha com operação e quantidade > 0.', 'error'); return; }
   const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
   const payload = {
     data,
@@ -1813,12 +1857,16 @@ function openAtribuir(vagaId) {
     }).join('');
 
     const selectIndicar = !completo ? `
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-        <select id="col-sel-${li}" style="flex:1;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
-        <button class="btn btn-yellow btn-sm" style="white-space:nowrap" onclick="indicarNaLinha(${li})">
-          Indicar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
-        </button>
-      </div>` : `<div style="margin-top:8px"><span class="badge badge-success">✓ Todas as vagas preenchidas</span></div>`;
+      <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
+        <div style="font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Indicar colaborador para esta vaga</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="col-sel-${li}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
+          <button class="btn btn-yellow" style="white-space:nowrap" onclick="indicarNaLinha(${li})">
+            ✓ Confirmar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função automática: <strong>${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
+      </div>` : `<div style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
 
     return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
