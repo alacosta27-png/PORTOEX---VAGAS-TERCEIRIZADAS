@@ -1102,8 +1102,8 @@ tbody tr:hover { background: var(--gray-50); }
             <thead>
               <tr>
                 <th style="width:32px">#</th>
-                <th>Operação — Função automática</th>
-                <th style="width:110px">Função</th>
+                <th>Operação</th>
+                <th style="width:130px">Função</th>
                 <th style="width:65px">Qtd</th>
                 <th style="width:110px">Hora Inicial</th>
                 <th>Motorista <span style="font-weight:400;color:var(--gray-400);font-size:10px">(só ROTA)</span></th>
@@ -1113,7 +1113,7 @@ tbody tr:hover { background: var(--gray-50); }
             <tbody id="vaga-linhas-body"></tbody>
           </table>
         </div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">ROTA: cadastrado 1 por linha. Outros: use Qtd para múltiplos.</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:8px;">ROTA: cadastrado 1 por linha. Outros: use Qtd para múltiplos. Função pode ser alterada para Conferente.</div>
       </div>
       <div class="form-group" style="margin-top:14px;">
         <label>Observações gerais</label>
@@ -2034,25 +2034,38 @@ function renderVagaLinhas() {
   tbody.innerHTML = vagaLinhas.map((l, i) => {
     const li = vagaLinhas.indexOf(l);
     const opAtual = l.opId ? (STATE.operacoes[l.opId] || {}) : {};
-    const funcaoLabel = opAtual.funcao || (opAtual.nome ? getFuncaoByOp(opAtual.nome) : '');
+    // Função: usa override se definido, senão automática pela operação
+    const funcaoAuto = opAtual.funcao || (opAtual.nome ? getFuncaoByOp(opAtual.nome) : '');
+    const funcaoAtual = l.funcaoOverride || funcaoAuto;
     const isRota = opAtual.cc === 'ROTA' || opAtual.nome === 'ROTA';
+    const isConferente = funcaoAtual === 'Conferente';
+
     const qtdCell = isRota
       ? `<td style="text-align:center;font-size:11px;color:var(--gray-400);padding:0 8px">1</td>`
       : `<td><input type="number" min="0" value="${l.qtd||0}" style="width:60px;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;text-align:center" onchange="vagaLinhas[${li}].qtd=parseInt(this.value)||0"></td>`;
+
     const motCell = isRota
       ? `<td><select style="width:100%;padding:6px 8px;border:1px solid var(--yellow);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px;background:var(--yellow-soft)" onchange="vagaLinhas[${li}].motoristaId=this.value;vagaLinhas[${li}].motoristaNome=this.options[this.selectedIndex].text">${motOpts.replace(`value="${l.motoristaId||''}"`,`value="${l.motoristaId||''}" selected`)}</select></td>`
       : `<td style="text-align:center;color:var(--gray-200);font-size:11px">—</td>`;
-    return `<tr>
+
+    // Select de função com opção de Conferente
+    const funcaoSelect = `<select style="padding:5px 8px;border:1px solid ${isConferente?'#6ee7a0':'var(--gray-200)'};border-radius:var(--radius);font-family:Sora,sans-serif;font-size:11px;background:${isConferente?'var(--success-bg)':'white'};color:${isConferente?'var(--success)':'var(--gray-800)'};font-weight:${isConferente?'700':'400'}"
+      onchange="vagaLinhas[${li}].funcaoOverride=this.value==='auto'?'':this.value;renderVagaLinhas()">
+      <option value="auto" ${!l.funcaoOverride?'selected':''}>Auto (${funcaoAuto||'—'})</option>
+      <option value="Ajudante Interno" ${l.funcaoOverride==='Ajudante Interno'?'selected':''}>Aj. Interno</option>
+      <option value="Ajudante Externo" ${l.funcaoOverride==='Ajudante Externo'?'selected':''}>Aj. Externo</option>
+      <option value="Conferente" ${l.funcaoOverride==='Conferente'?'selected':''}>⭐ Conferente</option>
+    </select>`;
+
+    return `<tr style="${isConferente?'background:var(--success-bg)':''}">
       <td style="color:var(--gray-400);font-size:12px;text-align:center">${i+1}</td>
       <td>
         <select style="width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px"
-          onchange="vagaLinhas[${li}].opId=this.value;vagaLinhas[${li}].qtd=1;renderVagaLinhas()">
+          onchange="vagaLinhas[${li}].opId=this.value;vagaLinhas[${li}].qtd=1;vagaLinhas[${li}].funcaoOverride='';renderVagaLinhas()">
           ${opOpts.replace(`value="${l.opId}"`, `value="${l.opId}" selected`)}
         </select>
       </td>
-      <td style="font-size:12px;font-weight:500;color:var(--navy);white-space:nowrap;padding:0 10px">
-        ${funcaoLabel ? `<span class="badge ${funcaoBadge(funcaoLabel)}" style="font-size:10px">${funcaoLabel}</span>` : '<span style="color:var(--gray-400)">—</span>'}
-      </td>
+      <td style="padding:0 8px">${funcaoSelect}</td>
       ${qtdCell}
       <td><input type="time" value="${l.hora||''}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:12px" onchange="vagaLinhas[${li}].hora=this.value"></td>
       ${motCell}
@@ -2068,7 +2081,9 @@ function saveVaga() {
   vagaLinhas.forEach(l => {
     if (!l.opId) return;
     const op = STATE.operacoes[l.opId] || {};
-    const funcao = op.funcao || getFuncaoByOp(op.nome);
+    // Função: override tem prioridade sobre automática
+    const funcaoAuto = op.funcao || getFuncaoByOp(op.nome);
+    const funcao = l.funcaoOverride || funcaoAuto;
     const isRota = op.cc === 'ROTA' || op.nome === 'ROTA';
     const qtd = isRota ? 1 : (parseInt(l.qtd) || 0);
     if (qtd <= 0) return;
@@ -2152,10 +2167,11 @@ function renderMural() {
         : filled > 0
           ? `<span style="font-size:11px;color:var(--warning);font-weight:600">${filled}/${needed} ▸ faltam ${vagasRestantes}</span>`
           : `<span style="font-size:11px;color:var(--gray-400)">${filled}/${needed}</span>`;
-      return `<tr>
+      const isConf = linha.funcao === 'Conferente';
+      return `<tr style="${isConf?'background:#F0FDF4;':''}">
         <td style="font-weight:600;font-size:12px">${linha.opNome||'—'}</td>
         <td><span class="badge badge-info" style="font-size:10px">${linha.opCC||'—'}</span></td>
-        <td style="font-size:12px">${linha.funcao||'—'}</td>
+        <td><span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConf?'⭐ ':''} ${linha.funcao||'—'}</span></td>
         <td style="font-size:12px;text-align:center;font-weight:600">${needed}</td>
         <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${linha.hora||'—'}</td>
         <td>${statusCell}</td>
@@ -2242,6 +2258,25 @@ function openAtribuir(vagaIdsStr) {
     const needed = linha.qtd || 0;
     const completo = filled >= needed;
     const vagasRestantes = needed - filled;
+    const isConferente = linha.funcao === 'Conferente';
+
+    // Buscar valores cadastrados para Conferente desta empresa
+    let conferenteInfoHTML = '';
+    if (isConferente) {
+      const emp = STATE.empresas[empId] || {};
+      const valConf = (emp.valores || {})['Conferente'] || {};
+      const valorDia = parseFloat(valConf.valor) || 0;
+      const valorHE  = parseFloat(valConf.he) || 0;
+      conferenteInfoHTML = `
+        <div style="background:#E6F5EE;border:1px solid #6ee7a0;border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:13px;font-weight:700;color:var(--success)">⭐ Vaga de Conferente</div>
+          ${valorDia > 0
+            ? `<div style="font-size:12px;color:var(--success)">Valor/dia: <strong>R$ ${valorDia.toFixed(2).replace('.',',')}</strong></div>
+               <div style="font-size:12px;color:var(--success)">H. Extra: <strong>R$ ${valorHE.toFixed(2).replace('.',',')}</strong></div>`
+            : `<div style="font-size:12px;color:var(--gray-400)">Valores não configurados — fale com a Portoex</div>`
+          }
+        </div>`;
+    }
 
     const listaAtribs = atribs.map(a => {
       const minha = a.empresaId === empId;
@@ -2254,25 +2289,28 @@ function openAtribuir(vagaIdsStr) {
     }).join('');
 
     const selectIndicar = !completo ? `
-      <div id="sel-wrap-${gIdx}" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-top:8px">
-        <div style="font-size:11px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Indicar colaborador para esta vaga</div>
+      <div id="sel-wrap-${gIdx}" style="background:${isConferente?'#F0FDF4':'var(--gray-50)'};border-radius:var(--radius);padding:10px 12px;margin-top:8px;${isConferente?'border:1px solid #6ee7a0;':''}">
+        <div style="font-size:11px;font-weight:600;color:${isConferente?'var(--success)':'var(--gray-600)'};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+          ${isConferente?'⭐ Indicar Conferente':'Indicar colaborador para esta vaga'}
+        </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="col-sel-${gIdx}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
-          <button class="btn btn-yellow" style="white-space:nowrap" onclick="indicarNaLinha(${gIdx},'${vagaId}',${li})">
+          <select id="col-sel-${gIdx}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid ${isConferente?'#6ee7a0':'var(--gray-200)'};border-radius:var(--radius);font-family:Sora,sans-serif;font-size:13px">${colOpts}</select>
+          <button class="btn ${isConferente?'btn-success':'btn-yellow'}" style="white-space:nowrap;${isConferente?'background:var(--success);color:white;':''}" onclick="indicarNaLinha(${gIdx},'${vagaId}',${li})">
             ✓ Confirmar (${vagasRestantes} vaga${vagasRestantes>1?'s':''})
           </button>
         </div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função automática: <strong>${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:6px">Função: <strong style="color:${isConferente?'var(--success)':'inherit'}">${linha.funcao}</strong> · Hora: <strong>${linha.hora||'—'}</strong></div>
       </div>` : `<div id="sel-wrap-${gIdx}" style="margin-top:8px"><span class="badge badge-success" style="padding:6px 14px">✓ Todas as vagas desta linha preenchidas</span></div>`;
 
-    return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px">
+    return `<div style="border-bottom:1px solid var(--gray-100);padding:16px 22px;${isConferente?'background:#F0FDF4;':''}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="background:var(--navy);color:var(--yellow);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">${linha.opNome}</div>
+        <div style="background:${isConferente?'var(--success)':'var(--navy)'};color:${isConferente?'white':'var(--yellow)'};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">${linha.opNome}</div>
         <span class="badge badge-info" style="font-size:10px">${linha.opCC}</span>
-        <span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${linha.funcao}</span>
+        <span class="badge ${funcaoBadge(linha.funcao)}" style="font-size:10px">${isConferente?'⭐ ':''} ${linha.funcao}</span>
         ${linha.hora ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray-400)">⏰ ${linha.hora}</span>` : ''}
         <span id="counter-${gIdx}" style="margin-left:auto;font-size:12px;font-weight:600;color:${completo?'var(--success)':'var(--warning)'}">${filled}/${needed}</span>
       </div>
+      ${conferenteInfoHTML}
       <div id="lista-atribs-${gIdx}">${listaAtribs}</div>
       ${selectIndicar}
     </div>`;
