@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PORTOEX — Terceirizados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK v8 compat -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+:root {
+  --navy: #0D1B3E;
+  --navy-mid: #162347;
+  --navy-light: #1E3060;
+  --yellow: #F5C518;
+  --yellow-dark: #D4A800;
+  --yellow-soft: #FFF3B0;
+  --white: #FFFFFF;
+  --gray-50: #F8F9FA;
+  --gray-100: #F0F1F3;
+  --gray-200: #E0E2E7;
+  --gray-400: #9BA3AF;
+  --gray-600: #5A6270;
+  --gray-800: #2D3340;
+  --success: #1A7F4B;
+  --success-bg: #E6F5EE;
+  --danger: #C0392B;
+  --danger-bg: #FDECEA;
+  --warning: #B45309;
+  --warning-bg: #FEF3C7;
+  --orange: #E8721C;
+  --orange-bg: #FEF0E6;
+  --info: #1565C0;
+  --info-bg: #E3F0FC;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 4px rgba(0,0,0,0.10);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+#app-header {
+  background: var(--navy);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-box {
+  background: var(--yellow);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.header-title {
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-badge {
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.8);
+  padding: 5px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Sora', sans-serif;
+  transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.1); }
+
+/* ===== LOGIN ===== */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy);
+}
+.login-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-md);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-logo-box {
+  background: var(--navy);
+  color: var(--yellow);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 2px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.login-subtitle {
+  font-size: 12px;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.login-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.login-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.15s;
+}
+.login-form input:focus { border-color: var(--navy); }
+.btn-primary {
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  padding: 11px 20px;
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 20px;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--navy-light); }
+.login-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+  display: none;
+}
+
+/* ===== LAYOUT ===== */
+#app-layout {
+  display: none;
+  flex-direction: column;
+  min-height: calc(100vh - 56px);
+}
+
+/* ===== NAV TABS ===== */
+.nav-tabs {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  padding: 0 24px;
+  gap: 4px;
+}
+.nav-tab {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-400);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-tab:hover { color: var(--gray-800); }
+.nav-tab.active {
+  color: var(--navy);
+  border-bottom-color: var(--yellow);
+  font-weight: 600;
+}
+
+/* ===== CONTENT ===== */
+.content-area {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== SECTION TITLE ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: var(--yellow);
+  border-radius: 2px;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  color: var(--gray-800);
+  outline: none;
+  transition: border 0.15s;
+  background: var(--white);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--navy); }
+.form-group input[readonly],
+.form-group input[disabled] {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  cursor: not-allowed;
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+.btn {
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.btn-navy { background: var(--navy); color: var(--white); }
+.btn-navy:hover { background: var(--navy-light); }
+.btn-yellow { background: var(--yellow); color: var(--navy); }
+.btn-yellow:hover { background: var(--yellow-dark); }
+.btn-ghost {
+  background: transparent;
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+}
+.btn-ghost:hover { background: var(--gray-50); }
+.btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fca5a5; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-success { background: var(--success-bg); color: var(--success); border: 1px solid #6ee7a0; }
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.badge-navy { background: var(--navy); color: var(--yellow); }
+.badge-yellow { background: var(--yellow-soft); color: var(--warning); }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
+.badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+/* ===== TABLE ===== */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+  font-size: 13px;
+}
+thead th {
+  background: var(--gray-50);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--gray-50); }
+.td-name { font-weight: 500; }
+.td-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+/* ===== MURAL ===== */
+.mural-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.mural-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.mural-card:hover { box-shadow: var(--shadow-md); }
+.mural-card-header {
+  background: var(--navy);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.mural-op-name {
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.mural-date {
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  margin-top: 3px;
+}
+.mural-body { padding: 14px 16px; }
+.mural-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 12px;
+}
+.mural-row:last-child { border-bottom: none; }
+.mural-label { color: var(--gray-400); }
+.mural-value { font-weight: 600; color: var(--gray-800); }
+.mural-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mural-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+}
+.mural-progress {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.mural-progress-bar {
+  height: 100%;
+  background: var(--yellow);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* ===== ACOMPANHAMENTO ===== */
+.acomp-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.acomp-header {
+  background: var(--navy);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acomp-op { color: var(--yellow); font-size: 13px; font-weight: 700; }
+.acomp-meta { color: rgba(255,255,255,0.6); font-size: 11px; }
+.acomp-table thead th { background: #f0f4ff; }
+.horas-ok { color: var(--success); font-weight: 600; }
+.horas-warn { color: var(--orange); font-weight: 600; background: var(--orange-bg); padding: 2px 8px; border-radius: 4px; }
+.horas-over { color: var(--danger); font-weight: 600; background: var(--danger-bg); padding: 2px 8px; border-radius: 4px; }
+.horas-neg { color: var(--info); font-weight: 600; }
+
+/* ===== CHECKBOX GROUP ===== */
+.check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 12px;
+  font-weight: 500;
+}
+.check-item input { display: none; }
+.check-item:has(input:checked) {
+  background: var(--navy);
+  color: var(--yellow);
+  border-color: var(--navy);
+}
+.check-item:hover { border-color: var(--navy); }
+
+/* ===== TABS INNER ===== */
+.inner-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.inner-tab {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-400);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.inner-tab.active { color: var(--navy); border-bottom-color: var(--yellow); }
+.inner-page { display: none; }
+.inner-page.active { display: block; }
+
+/* ===== UPLOAD ===== */
+.upload-zone {
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.upload-zone:hover { border-color: var(--navy); background: var(--gray-50); }
+.upload-icon { font-size: 32px; margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--gray-400); }
+.upload-text strong { color: var(--navy); }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  display: none;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--navy);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.modal-title { color: var(--white); font-size: 15px; font-weight: 700; }
+.modal-close {
+  color: rgba(255,255,255,0.7);
+  font-size: 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  line-height: 1;
+}
+.modal-body { padding: 22px; }
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--gray-400);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
+
+/* ===== FUNCOES GRID ===== */
+.func-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.func-box {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--gray-50);
+}
+.func-box-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.func-box .form-group label { font-size: 10px; }
+
+/* ===== TOAST ===== */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast-msg {
+  background: var(--navy);
+  color: var(--white);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideIn 0.2s ease;
+}
+.toast-msg.success { border-left: 3px solid var(--yellow); }
+.toast-msg.error { border-left: 3px solid var(--danger); }
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .content-area { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .func-grid { grid-template-columns: 1fr; }
+  .mural-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-box">PORTOEX</div>
+      <div class="login-subtitle">Gestão de Terceirizados</div>
+    </div>
+    <div class="login-form">
+      <label>Login</label>
+      <input type="text" id="login-user" placeholder="usuário ou e-mail" autocomplete="username">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••" autocomplete="current-password">
+      <button class="btn-primary" onclick="doLogin()">Entrar</button>
+      <div class="login-error" id="login-error">Usuário ou senha inválidos.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-layout">
+  <header id="app-header">
+    <div class="header-logo">
+      <div class="logo-box">PORTOEX</div>
+      <span class="header-title">Terceirizados</span>
+    </div>
+    <div class="header-right">
+      <span class="user-badge" id="header-user">—</span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <nav class="nav-tabs" id="nav-tabs"></nav>
+
+  <div class="content-area">
+
+    <!-- ===================== PÁGINA: MURAL ===================== -->
+    <div id="page-mural" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📋 Mural de Vagas</div>
+          <div class="section-sub">Vagas disponíveis para atribuição pelas empresas</div>
+        </div>
+        <div id="btn-nova-vaga-wrap" style="display:none">
+          <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+        </div>
+      </div>
+      <div class="mural-grid" id="mural-grid">
+        <div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">Nenhuma vaga publicada.</div></div>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: CADASTRAR COLABORADORES ===================== -->
+    <div id="page-colaboradores" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">👥 Meus Colaboradores</div>
+          <div class="section-sub" id="empresa-nome-sub">—</div>
+        </div>
+      </div>
+      <div class="inner-tabs">
+        <div class="inner-tab active" onclick="switchInner('col','manual')">Cadastro Manual</div>
+        <div class="inner-tab" onclick="switchInner('col','upload')">Upload</div>
+        <div class="inner-tab" onclick="switchInner('col','lista')">Listagem</div>
+      </div>
+      <div id="col-manual" class="inner-page active">
+        <div class="card">
+          <div class="card-title">Novo Colaborador</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>CPF / RG *</label>
+              <input type="text" id="col-cpf" placeholder="000.000.000-00" oninput="checkColaborador()">
+            </div>
+            <div class="form-group">
+              <label>Nome *</label>
+              <input type="text" id="col-nome" placeholder="Nome completo">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Operação</label>
+              <select id="col-operacao">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+          </div>
+          <div id="col-aviso" style="display:none; margin-top:12px; padding:10px 14px; background:var(--warning-bg); border-radius:var(--radius); font-size:12px; color:var(--warning);">
+            ⚠️ Este CPF/RG já está cadastrado. Os dados bloqueados não serão alterados.
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-navy" onclick="saveColaborador()">Salvar Colaborador</button>
+            <button class="btn btn-ghost" onclick="clearColForm()">Limpar</button>
+          </div>
+        </div>
+      </div>
+      <div id="col-upload" class="inner-page">
+        <div class="card">
+          <div class="card-title">Upload de Colaboradores (CSV)</div>
+          <div class="upload-zone" onclick="document.getElementById('col-file').click()">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text"><strong>Clique para selecionar</strong> ou arraste um arquivo CSV</div>
+            <div class="upload-text" style="margin-top:6px; font-size:11px;">Colunas esperadas: CPF, Nome, Operação</div>
+          </div>
+          <input type="file" id="col-file" accept=".csv" style="display:none" onchange="handleCSV(event)">
+          <div id="csv-preview" style="margin-top:16px;"></div>
+        </div>
+      </div>
+      <div id="col-lista" class="inner-page">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>CPF / RG</th><th>Nome</th><th>Operação</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="col-lista-body"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador cadastrado.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – EMPRESAS ===================== -->
+    <div id="page-empresas" class="page">
+      <div class="section-header">
+        <div><div class="section-title">🏢 Empresas Terceirizadas</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-empresa')">+ Nova Empresa</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Empresa</th><th>Login</th><th>Senha</th><th>Status</th><th>Colaboradores</th><th>Ações</th></tr></thead>
+          <tbody id="empresas-tbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma empresa cadastrada.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – OPERAÇÕES ===================== -->
+    <div id="page-operacoes" class="page">
+      <div class="section-header">
+        <div><div class="section-title">⚙️ Operações & Centro de Custo</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-operacao')">+ Nova Operação</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Centro de Custo</th><th>Ativa</th><th>Ações</th></tr></thead>
+          <tbody id="operacoes-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PÁGINA: ACOMPANHAMENTO ===================== -->
+    <div id="page-acompanhamento" class="page">
+      <div class="section-header">
+        <div>
+          <div class="section-title">⏱️ Acompanhamento de Ponto</div>
+          <div class="section-sub">Controle de chegada, refeição e horas trabalhadas</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="filter-op-acomp" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;" onchange="renderAcompanhamento()">
+            <option value="">Todas as operações</option>
+          </select>
+        </div>
+      </div>
+      <div id="acomp-container"></div>
+    </div>
+
+    <!-- ===================== PÁGINA: ADMIN – VAGAS (gerenciar) ===================== -->
+    <div id="page-vagas-admin" class="page">
+      <div class="section-header">
+        <div><div class="section-title">📋 Gerenciar Vagas</div></div>
+        <button class="btn btn-yellow" onclick="openModal('modal-vaga')">+ Nova Vaga</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Operação</th><th>Data</th><th>Horário</th><th>Função</th><th>Empresas</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="vagas-admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- content-area -->
+</div><!-- app-layout -->
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Modal: Nova Empresa -->
+<div class="modal-overlay" id="modal-empresa">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Empresa Terceirizada</div>
+      <button class="modal-close" onclick="closeModal('modal-empresa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Nome da Empresa *</label>
+          <input type="text" id="emp-nome" placeholder="Razão social ou nome fantasia">
+        </div>
+        <div class="form-group">
+          <label>Login de Acesso *</label>
+          <input type="text" id="emp-login" placeholder="empresa@login">
+        </div>
+        <div class="form-group">
+          <label>Senha *</label>
+          <input type="text" id="emp-senha" placeholder="Senha de acesso">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="emp-status">
+            <option value="ativa">Ativa</option>
+            <option value="inativa">Inativa</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:10px;">Tabela de Valores por Função</label>
+        <div class="func-grid">
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Interno</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ai" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ai" placeholder="0,00" step="0.01"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Externo</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-ae" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-ae" placeholder="0,00" step="0.01"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Conferente</div>
+            <div class="form-group"><label>Valor/dia (R$)</label><input type="number" id="emp-val-co" placeholder="0,00" step="0.01"></div>
+            <div class="form-group" style="margin-top:8px"><label>Hora Extra (R$)</label><input type="number" id="emp-he-co" placeholder="0,00" step="0.01"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-empresa')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveEmpresa()">Salvar Empresa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Operação -->
+<div class="modal-overlay" id="modal-operacao">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Operação</div>
+      <button class="modal-close" onclick="closeModal('modal-operacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome da Operação *</label>
+          <input type="text" id="op-nome" placeholder="Ex: BRAFT">
+        </div>
+        <div class="form-group">
+          <label>Centro de Custo *</label>
+          <select id="op-cc">
+            <option value="ROTA">ROTA</option>
+            <option value="EXPEDIÇÃO">EXPEDIÇÃO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ativa</label>
+          <select id="op-ativa">
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-operacao')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveOperacao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Vaga -->
+<div class="modal-overlay" id="modal-vaga">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title">Publicar Vaga no Mural</div>
+      <button class="modal-close" onclick="closeModal('modal-vaga')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Operação *</label>
+          <select id="vaga-op"></select>
+        </div>
+        <div class="form-group">
+          <label>Data de Trabalho *</label>
+          <input type="date" id="vaga-data">
+        </div>
+        <div class="form-group">
+          <label>Horário Previsto</label>
+          <input type="time" id="vaga-hora">
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Funções Necessárias</label>
+        <div class="func-grid">
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Interno</div>
+            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-ai" min="0" value="0"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Ajudante Externo</div>
+            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-ae" min="0" value="0"></div>
+          </div>
+          <div class="func-box">
+            <div class="func-box-title">Conferente</div>
+            <div class="form-group"><label>Qtd necessária</label><input type="number" id="vaga-qtd-co" min="0" value="0"></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Direcionar para Empresas</label>
+        <div class="check-group" id="vaga-empresas-check"></div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Deixar em branco = todas as empresas ativas visualizam.</div>
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>Observações</label>
+        <textarea id="vaga-obs" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-vaga')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveVaga()">Publicar Vaga</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atribuir Colaborador à Vaga -->
+<div class="modal-overlay" id="modal-atribuir">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Indicar Colaborador para a Vaga</div>
+      <button class="modal-close" onclick="closeModal('modal-atribuir')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="atribuir-vaga-info" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;"></div>
+      <div class="form-group">
+        <label>Função que irá atender *</label>
+        <select id="atribuir-funcao">
+          <option value="Ajudante Interno">Ajudante Interno</option>
+          <option value="Ajudante Externo">Ajudante Externo</option>
+          <option value="Conferente">Conferente</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label>Colaborador *</label>
+        <select id="atribuir-col">
+          <option value="">Selecione um colaborador...</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-atribuir')">Cancelar</button>
+      <button class="btn btn-navy" onclick="confirmarAtribuicao()">Confirmar Indicação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Acompanhamento – editar linha -->
+<div class="modal-overlay" id="modal-acomp-edit">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="acomp-edit-title">Editar Ponto</div>
+      <button class="modal-close" onclick="closeModal('modal-acomp-edit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Horário Real de Chegada</label>
+          <input type="time" id="ae-chegada">
+        </div>
+        <div class="form-group">
+          <label>Tempo de Refeição</label>
+          <select id="ae-refeicao">
+            <option value="01:00">01h00</option>
+            <option value="01:30">01h30</option>
+            <option value="02:00">02h00</option>
+            <option value="manual">Manual...</option>
+          </select>
+        </div>
+        <div class="form-group" id="ae-ref-manual-wrap" style="display:none">
+          <label>Refeição manual (hh:mm)</label>
+          <input type="time" id="ae-ref-manual">
+        </div>
+        <div class="form-group">
+          <label>Horário de Saída Real</label>
+          <input type="time" id="ae-saida">
+        </div>
+        <div class="form-group">
+          <label>Aceitar negativo como desconto?</label>
+          <select id="ae-desconto">
+            <option value="nao">Não (só medir)</option>
+            <option value="sim">Sim (descontar)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="ae-status">
+            <option value="Em escolha">Em escolha</option>
+            <option value="Validada">Validada</option>
+            <option value="Presente">Presente</option>
+            <option value="Ausente">Ausente</option>
+            <option value="Encerrado">Encerrado</option>
+          </select>
+        </div>
+      </div>
+      <div id="ae-preview" style="margin-top:16px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-acomp-edit')">Cancelar</button>
+      <button class="btn btn-navy" onclick="saveAcompEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ===================== FIREBASE CONFIG =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDsKKZaK1WBo3FjNo-2o0O5a0ehV4tDy4U",
+  authDomain: "vagas-terceirizados-portoex.firebaseapp.com",
+  databaseURL: "https://vagas-terceirizados-portoex-default-rtdb.firebaseio.com",
+  projectId: "vagas-terceirizados-portoex",
+  storageBucket: "vagas-terceirizados-portoex.firebasestorage.app",
+  messagingSenderId: "688106736915",
+  appId: "1:688106736915:web:412ff19368208198269ee6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ===================== STATE =====================
+let currentUser = null; // { role: 'admin'|'empresa', empresaId, empresaNome, login }
+let STATE = {
+  empresas: {},
+  operacoes: {},
+  colaboradores: {},
+  vagas: {},
+  acompanhamento: {}
+};
+let editEmpresaId = null;
+let editVagaId = null;
+let currentAtribuirVagaId = null;
+let currentAcompId = null;
+
+// Admin fixo (pode ser movido para Firebase futuramente)
+const ADMIN_LOGIN = 'portoex.admin';
+const ADMIN_SENHA = 'admin@2024';
+
+// ===================== OPERAÇÕES PADRÃO =====================
+const OPERACOES_PADRAO = [
+  { nome: 'ROTA', cc: 'ROTA' },
+  { nome: 'ESTOQUE', cc: 'EXPEDIÇÃO' },
+  { nome: 'BRAFT', cc: 'ROTA' },
+  { nome: 'SAMSONITE', cc: 'ROTA' },
+  { nome: 'MATTEL', cc: 'EXPEDIÇÃO' },
+  { nome: 'MANOBRA', cc: 'ROTA' },
+  { nome: 'THOMPSON', cc: 'ROTA' },
+  { nome: 'S.K.O', cc: 'ROTA' },
+  { nome: 'N/D', cc: 'EXPEDIÇÃO' },
+];
+
+// ===================== LOGIN =====================
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  if (user === ADMIN_LOGIN && pass === ADMIN_SENHA) {
+    currentUser = { role: 'admin', login: user };
+    initApp();
+    return;
+  }
+
+  // Checar empresa
+  db.ref('empresas').once('value', snap => {
+    const empresas = snap.val() || {};
+    let found = null;
+    Object.entries(empresas).forEach(([id, emp]) => {
+      if (emp.login === user && emp.senha === pass && emp.status === 'ativa') {
+        found = { role: 'empresa', empresaId: id, empresaNome: emp.nome, login: user };
+      }
+    });
+    if (found) {
+      currentUser = found;
+      initApp();
+    } else {
+      errEl.style.display = 'block';
+    }
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+});
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-layout').style.display = 'none';
+}
+
+// ===================== INIT =====================
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-layout').style.display = 'flex';
+  document.getElementById('header-user').textContent =
+    currentUser.role === 'admin' ? '🔑 Administrador' : ('🏢 ' + currentUser.empresaNome);
+
+  buildNavTabs();
+  listenFirebase();
+  initOperacoesPadrao();
+  setTimeout(() => switchPage(currentUser.role === 'admin' ? 'page-mural' : 'page-mural'), 100);
+}
+
+function buildNavTabs() {
+  const nav = document.getElementById('nav-tabs');
+  nav.innerHTML = '';
+  const tabs = currentUser.role === 'admin'
+    ? [
+        { id: 'page-mural', label: 'Mural de Vagas' },
+        { id: 'page-vagas-admin', label: 'Gerenciar Vagas' },
+        { id: 'page-acompanhamento', label: 'Acompanhamento' },
+        { id: 'page-empresas', label: 'Empresas' },
+        { id: 'page-operacoes', label: 'Operações' },
+      ]
+    : [
+        { id: 'page-mural', label: 'Mural de Vagas' },
+        { id: 'page-colaboradores', label: 'Meus Colaboradores' },
+        { id: 'page-acompanhamento', label: 'Acompanhamento' },
+      ];
+
+  tabs.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'nav-tab';
+    el.textContent = t.label;
+    el.onclick = () => switchPage(t.id);
+    el.dataset.page = t.id;
+    nav.appendChild(el);
+  });
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('btn-nova-vaga-wrap').style.display = 'block';
+  }
+  if (currentUser.role === 'empresa') {
+    document.getElementById('empresa-nome-sub').textContent = currentUser.empresaNome;
+  }
+}
+
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === pageId);
+  });
+  document.getElementById(pageId).classList.add('active');
+
+  if (pageId === 'page-mural') renderMural();
+  if (pageId === 'page-acompanhamento') renderAcompanhamento();
+  if (pageId === 'page-colaboradores') renderColLista();
+  if (pageId === 'page-empresas') renderEmpresas();
+  if (pageId === 'page-operacoes') renderOperacoes();
+  if (pageId === 'page-vagas-admin') renderVagasAdmin();
+}
+
+function switchInner(group, tab) {
+  document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.inner-page').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(group + '-' + tab).classList.add('active');
+  if (tab === 'lista') renderColLista();
+}
+
+// ===================== FIREBASE LISTENERS =====================
+function listenFirebase() {
+  db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); });
+  db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
+  db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
+  db.ref('acompanhamento').on('value', snap => { STATE.acompanhamento = snap.val() || {}; renderAcompanhamento(); });
+  const colPath = currentUser.role === 'empresa'
+    ? 'colaboradores/' + currentUser.empresaId
+    : 'colaboradores';
+  db.ref(colPath).on('value', snap => {
+    if (currentUser.role === 'empresa') {
+      STATE.colaboradores[currentUser.empresaId] = snap.val() || {};
+    } else {
+      STATE.colaboradores = snap.val() || {};
+    }
+    renderColLista();
+    populateAtribuirCol();
+  });
+}
+
+function initOperacoesPadrao() {
+  db.ref('operacoes').once('value', snap => {
+    if (!snap.val()) {
+      OPERACOES_PADRAO.forEach(op => {
+        db.ref('operacoes').push({ nome: op.nome, cc: op.cc, ativa: 'sim' });
+      });
+    }
+  });
+}
+
+// ===================== EMPRESAS =====================
+function renderEmpresas() {
+  const tbody = document.getElementById('empresas-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.empresas);
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma empresa cadastrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(([id, emp]) => {
+    const nCols = Object.keys(STATE.colaboradores[id] || {}).length;
+    return `<tr>
+      <td class="td-name">${emp.nome}</td>
+      <td class="td-mono">${emp.login}</td>
+      <td class="td-mono">${emp.senha}</td>
+      <td><span class="badge ${emp.status==='ativa'?'badge-success':'badge-gray'}">${emp.status}</span></td>
+      <td>${nCols}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="editEmpresa('${id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmpresa('${id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'modal-vaga') populateVagaModal();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editEmpresaId = null;
+  editVagaId = null;
+}
+
+function saveEmpresa() {
+  const nome = v('emp-nome'), login = v('emp-login'), senha = v('emp-senha'), status = v('emp-status');
+  if (!nome || !login || !senha) { toast('Preencha nome, login e senha.', 'error'); return; }
+  const data = {
+    nome, login, senha, status,
+    valores: {
+      'Ajudante Interno': { valor: n('emp-val-ai'), he: n('emp-he-ai') },
+      'Ajudante Externo': { valor: n('emp-val-ae'), he: n('emp-he-ae') },
+      'Conferente': { valor: n('emp-val-co'), he: n('emp-he-co') }
+    }
+  };
+  const ref = editEmpresaId ? db.ref('empresas/' + editEmpresaId) : db.ref('empresas').push();
+  (editEmpresaId ? ref.set(data) : ref.set(data)).then(() => {
+    toast('Empresa salva!', 'success');
+    closeModal('modal-empresa');
+    clearEmpForm();
+  });
+}
+
+function editEmpresa(id) {
+  const emp = STATE.empresas[id];
+  editEmpresaId = id;
+  sv('emp-nome', emp.nome); sv('emp-login', emp.login); sv('emp-senha', emp.senha); sv('emp-status', emp.status);
+  const v2 = emp.valores || {};
+  sv('emp-val-ai', (v2['Ajudante Interno']||{}).valor||'');
+  sv('emp-he-ai', (v2['Ajudante Interno']||{}).he||'');
+  sv('emp-val-ae', (v2['Ajudante Externo']||{}).valor||'');
+  sv('emp-he-ae', (v2['Ajudante Externo']||{}).he||'');
+  sv('emp-val-co', (v2['Conferente']||{}).valor||'');
+  sv('emp-he-co', (v2['Conferente']||{}).he||'');
+  openModal('modal-empresa');
+}
+
+function deleteEmpresa(id) {
+  if (!confirm('Excluir esta empresa?')) return;
+  db.ref('empresas/' + id).remove().then(() => toast('Empresa excluída.'));
+}
+
+function clearEmpForm() {
+  ['emp-nome','emp-login','emp-senha','emp-val-ai','emp-he-ai','emp-val-ae','emp-he-ae','emp-val-co','emp-he-co'].forEach(i => sv(i,''));
+  sv('emp-status','ativa');
+}
+
+// ===================== OPERAÇÕES =====================
+function renderOperacoes() {
+  const tbody = document.getElementById('operacoes-tbody');
+  if (!tbody) return;
+  const items = Object.entries(STATE.operacoes);
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma operação.</td></tr>'; return; }
+  tbody.innerHTML = items.map(([id, op]) =>
+    `<tr>
+      <td class="td-name">${op.nome}</td>
+      <td><span class="badge badge-info">${op.cc}</span></td>
+      <td><span class="badge ${op.ativa==='sim'?'badge-success':'badge-gray'}">${op.ativa==='sim'?'Ativa':'Inativa'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="toggleOp('${id}','${op.ativa}')">
+          ${op.ativa==='sim'?'Desativar':'Ativar'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOp('${id}')">Excluir</button>
+      </td>
+    </tr>`
+  ).join('');
+}
+
+function saveOperacao() {
+  const nome = v('op-nome'), cc = v('op-cc'), ativa = v('op-ativa');
+  if (!nome) { toast('Informe o nome da operação.', 'error'); return; }
+  db.ref('operacoes').push({ nome, cc, ativa }).then(() => { toast('Operação salva!', 'success'); closeModal('modal-operacao'); sv('op-nome',''); });
+}
+
+function toggleOp(id, ativa) {
+  db.ref('operacoes/' + id + '/ativa').set(ativa === 'sim' ? 'nao' : 'sim');
+}
+function deleteOp(id) {
+  if (!confirm('Excluir esta operação?')) return;
+  db.ref('operacoes/' + id).remove();
+}
+
+function populateOpSelects() {
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim');
+  const vagaOp = document.getElementById('vaga-op');
+  if (vagaOp) vagaOp.innerHTML = '<option value="">Selecione...</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome} / ${op.cc}</option>`).join('');
+
+  const colOp = document.getElementById('col-operacao');
+  if (colOp) colOp.innerHTML = '<option value="">Selecione...</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+
+  const filterOp = document.getElementById('filter-op-acomp');
+  if (filterOp) {
+    const cur = filterOp.value;
+    filterOp.innerHTML = '<option value="">Todas as operações</option>' + ops.map(([id,op]) => `<option value="${id}">${op.nome}</option>`).join('');
+    if (cur) filterOp.value = cur;
+  }
+}
+
+// ===================== COLABORADORES =====================
+function checkColaborador() {
+  const cpf = v('col-cpf');
+  if (!cpf) return;
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const found = Object.values(cols).find(c => c.cpf === cpf);
+  const aviso = document.getElementById('col-aviso');
+  if (found) {
+    sv('col-nome', found.nome);
+    document.getElementById('col-nome').readOnly = true;
+    aviso.style.display = 'block';
+  } else {
+    document.getElementById('col-nome').readOnly = false;
+    aviso.style.display = 'none';
+  }
+}
+
+function saveColaborador() {
+  const cpf = v('col-cpf'), nome = v('col-nome'), opId = v('col-operacao');
+  if (!cpf || !nome) { toast('CPF/RG e Nome são obrigatórios.', 'error'); return; }
+
+  const cols = STATE.colaboradores[currentUser.empresaId] || {};
+  const existing = Object.entries(cols).find(([,c]) => c.cpf === cpf);
+
+  const op = opId ? (STATE.operacoes[opId] || {}) : {};
+  const data = existing
+    ? { ...existing[1], operacaoId: opId, operacaoNome: op.nome || '' }
+    : { cpf, nome, operacaoId: opId, operacaoNome: op.nome || '', status: 'ativo', criadoEm: Date.now() };
+
+  const path = existing
+    ? `colaboradores/${currentUser.empresaId}/${existing[0]}`
+    : `colaboradores/${currentUser.empresaId}`;
+  const ref = existing ? db.ref(path) : db.ref(path).push();
+  (existing ? ref.set(data) : ref.set(data)).then(() => { toast('Colaborador salvo!', 'success'); clearColForm(); });
+}
+
+function clearColForm() {
+  sv('col-cpf',''); sv('col-nome',''); sv('col-operacao','');
+  document.getElementById('col-nome').readOnly = false;
+  document.getElementById('col-aviso').style.display = 'none';
+}
+
+function renderColLista() {
+  const tbody = document.getElementById('col-lista-body');
+  if (!tbody) return;
+  const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
+  let rows = [];
+  if (empId) {
+    rows = Object.entries(STATE.colaboradores[empId] || {});
+  } else {
+    Object.entries(STATE.colaboradores).forEach(([eid, cols]) => {
+      Object.entries(cols || {}).forEach(([cid, col]) => rows.push([cid, { ...col, _empId: eid }]));
+    });
+  }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhum colaborador.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(([id, col]) =>
+    `<tr>
+      <td class="td-mono">${col.cpf}</td>
+      <td class="td-name">${col.nome}</td>
+      <td>${col.operacaoNome || '—'}</td>
+      <td><span class="badge ${col.status==='ativo'?'badge-success':'badge-gray'}">${col.status||'ativo'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="toggleColStatus('${id}','${col._empId || currentUser.empresaId}','${col.status||'ativo'}')">
+        ${(col.status||'ativo')==='ativo'?'Inativar':'Ativar'}
+      </button></td>
+    </tr>`
+  ).join('');
+}
+
+function toggleColStatus(id, empId, status) {
+  db.ref(`colaboradores/${empId}/${id}/status`).set(status === 'ativo' ? 'inativo' : 'ativo');
+}
+
+function handleCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    const preview = document.getElementById('csv-preview');
+    let imported = 0;
+    const rows = [];
+    lines.forEach((line, i) => {
+      if (i === 0) return; // header
+      const parts = line.split(',').map(p => p.trim().replace(/"/g,''));
+      if (parts.length >= 2) rows.push({ cpf: parts[0], nome: parts[1], operacao: parts[2] || '' });
+    });
+    preview.innerHTML = `<div style="background:var(--info-bg);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:12px;">
+      📄 <strong>${rows.length}</strong> colaboradores encontrados no arquivo.
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>CPF</th><th>Nome</th><th>Operação</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td class="td-mono">${r.cpf}</td><td>${r.nome}</td><td>${r.operacao}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <button class="btn btn-navy" style="margin-top:12px" onclick="importCSVRows(${JSON.stringify(rows).replace(/"/g,'&quot;')})">Importar ${rows.length} Colaboradores</button>`;
+  };
+  reader.readAsText(file);
+}
+
+function importCSVRows(rows) {
+  const ops = STATE.operacoes;
+  let count = 0;
+  const batch = {};
+  rows.forEach(r => {
+    const opEntry = Object.entries(ops).find(([,op]) => op.nome.toUpperCase() === (r.operacao||'').toUpperCase());
+    const key = db.ref(`colaboradores/${currentUser.empresaId}`).push().key;
+    batch[key] = { cpf: r.cpf, nome: r.nome, operacaoId: opEntry?.[0]||'', operacaoNome: opEntry?.[1]?.nome||r.operacao||'', status: 'ativo', criadoEm: Date.now() };
+    count++;
+  });
+  db.ref(`colaboradores/${currentUser.empresaId}`).update(batch).then(() => toast(`${count} colaboradores importados!`, 'success'));
+}
+
+function populateAtribuirCol() {
+  const sel = document.getElementById('atribuir-col');
+  if (!sel) return;
+  const empId = currentUser.role === 'empresa' ? currentUser.empresaId : null;
+  if (!empId) return;
+  const cols = Object.entries(STATE.colaboradores[empId] || {}).filter(([,c]) => (c.status||'ativo') === 'ativo');
+  sel.innerHTML = '<option value="">Selecione...</option>' + cols.map(([id,c]) => `<option value="${id}">${c.nome} — ${c.cpf}</option>`).join('');
+}
+
+// ===================== VAGAS =====================
+function populateVagaModal() {
+  populateOpSelects();
+  populateVagaEmpresasCheck();
+  const hoje = new Date().toISOString().split('T')[0];
+  if (!v('vaga-data')) sv('vaga-data', hoje);
+}
+
+function populateVagaEmpresasCheck() {
+  const wrap = document.getElementById('vaga-empresas-check');
+  if (!wrap) return;
+  wrap.innerHTML = Object.entries(STATE.empresas).filter(([,e])=>e.status==='ativa').map(([id,emp]) =>
+    `<label class="check-item"><input type="checkbox" name="vaga-emp" value="${id}"> ${emp.nome}</label>`
+  ).join('');
+}
+
+function saveVaga() {
+  const opId = v('vaga-op'), data = v('vaga-data'), hora = v('vaga-hora');
+  if (!opId || !data) { toast('Selecione operação e data.', 'error'); return; }
+  const op = STATE.operacoes[opId] || {};
+  const empsSel = [...document.querySelectorAll('input[name="vaga-emp"]:checked')].map(e=>e.value);
+  const data2 = {
+    opId, opNome: op.nome, opCC: op.cc,
+    data, hora,
+    qtd: {
+      'Ajudante Interno': parseInt(v('vaga-qtd-ai'))||0,
+      'Ajudante Externo': parseInt(v('vaga-qtd-ae'))||0,
+      'Conferente': parseInt(v('vaga-qtd-co'))||0
+    },
+    empresasAlvo: empsSel.length ? empsSel : null,
+    obs: v('vaga-obs'),
+    status: 'aberta',
+    criadoEm: Date.now(),
+    atribuicoes: {}
+  };
+  const ref = editVagaId ? db.ref('vagas/'+editVagaId) : db.ref('vagas').push();
+  (editVagaId ? ref.set(data2) : ref.set(data2)).then(() => { toast('Vaga publicada!','success'); closeModal('modal-vaga'); });
+}
+
+function renderMural() {
+  const grid = document.getElementById('mural-grid');
+  if (!grid) return;
+  const vagas = Object.entries(STATE.vagas).filter(([,v]) => {
+    if (v.status === 'encerrada') return false;
+    if (currentUser.role === 'empresa') {
+      if (v.empresasAlvo && !v.empresasAlvo.includes(currentUser.empresaId)) return false;
+    }
+    return true;
+  });
+  if (!vagas.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📌</div><div class="empty-text">Nenhuma vaga publicada no momento.</div></div>';
+    return;
+  }
+  grid.innerHTML = vagas.map(([id, vaga]) => {
+    const atribs = Object.values(vaga.atribuicoes || {});
+    const totalNec = (vaga.qtd['Ajudante Interno']||0) + (vaga.qtd['Ajudante Externo']||0) + (vaga.qtd['Conferente']||0);
+    const totalAtrib = atribs.length;
+    const pct = totalNec ? Math.min(100, Math.round(totalAtrib / totalNec * 100)) : 0;
+    const isMinhaAtrib = atribs.some(a => a.empresaId === currentUser.empresaId);
+    const statusBadge = vaga.status === 'aberta'
+      ? '<span class="badge badge-success">Aberta</span>'
+      : '<span class="badge badge-warning">Em andamento</span>';
+    const btnAtribuir = currentUser.role === 'empresa'
+      ? `<button class="btn btn-yellow btn-sm" onclick="openAtribuir('${id}')">Indicar Colaborador</button>`
+      : '';
+    const btnEncerrar = currentUser.role === 'admin'
+      ? `<button class="btn btn-ghost btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>` : '';
+    return `<div class="mural-card">
+      <div class="mural-card-header">
+        <div>
+          <div class="mural-op-name">⚡ ${vaga.opNome}</div>
+          <div class="mural-date">📅 ${formatDate(vaga.data)} ${vaga.hora ? '• '+vaga.hora : ''}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      <div class="mural-body">
+        <div class="mural-row"><span class="mural-label">Centro de Custo</span><span class="mural-value">${vaga.opCC}</span></div>
+        <div class="mural-row"><span class="mural-label">Aj. Interno</span><span class="mural-value">${vaga.qtd['Ajudante Interno']||0} vaga(s)</span></div>
+        <div class="mural-row"><span class="mural-label">Aj. Externo</span><span class="mural-value">${vaga.qtd['Ajudante Externo']||0} vaga(s)</span></div>
+        <div class="mural-row"><span class="mural-label">Conferente</span><span class="mural-value">${vaga.qtd['Conferente']||0} vaga(s)</span></div>
+        ${vaga.obs ? `<div class="mural-row"><span class="mural-label">Obs</span><span class="mural-value" style="font-size:11px">${vaga.obs}</span></div>` : ''}
+        <div class="mural-status">
+          <span style="font-size:12px;color:var(--gray-400)">Preenchimento</span>
+          <span style="font-size:12px;font-weight:600">${totalAtrib}/${totalNec}</span>
+        </div>
+        <div class="mural-progress"><div class="mural-progress-bar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="mural-footer">
+        ${btnAtribuir}
+        ${btnEncerrar}
+        ${isMinhaAtrib ? '<span class="badge badge-info">✓ Indicação enviada</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAtribuir(vagaId) {
+  currentAtribuirVagaId = vagaId;
+  const vaga = STATE.vagas[vagaId];
+  document.getElementById('atribuir-vaga-info').innerHTML =
+    `<strong>${vaga.opNome}</strong> — ${formatDate(vaga.data)} ${vaga.hora||''}<br>
+     <span style="color:var(--gray-400);font-size:12px">Selecione a função e o colaborador que irá atender.</span>`;
+  populateAtribuirCol();
+  openModal('modal-atribuir');
+}
+
+function confirmarAtribuicao() {
+  const colId = v('atribuir-col'), funcao = v('atribuir-funcao');
+  if (!colId) { toast('Selecione um colaborador.', 'error'); return; }
+  const empId = currentUser.empresaId;
+  const col = (STATE.colaboradores[empId]||{})[colId];
+  const data = {
+    colId, colNome: col.nome, colCPF: col.cpf,
+    funcao, empresaId: empId,
+    empresaNome: currentUser.empresaNome,
+    atribuidoEm: Date.now(),
+    status: 'Em escolha'
+  };
+  db.ref(`vagas/${currentAtribuirVagaId}/atribuicoes`).push(data).then(() => {
+    // Criar registro de acompanhamento
+    db.ref('acompanhamento').push({
+      vagaId: currentAtribuirVagaId,
+      ...data,
+      opNome: STATE.vagas[currentAtribuirVagaId].opNome,
+      data: STATE.vagas[currentAtribuirVagaId].data,
+      horasPrevista: STATE.vagas[currentAtribuirVagaId].hora,
+    });
+    toast('Colaborador indicado com sucesso!', 'success');
+    closeModal('modal-atribuir');
+  });
+}
+
+function encerrarVaga(id) {
+  if (!confirm('Encerrar esta vaga?')) return;
+  db.ref('vagas/' + id + '/status').set('encerrada').then(() => toast('Vaga encerrada.'));
+}
+
+function renderVagasAdmin() {
+  const tbody = document.getElementById('vagas-admin-tbody');
+  if (!tbody) return;
+  const vagas = Object.entries(STATE.vagas);
+  if (!vagas.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">Nenhuma vaga.</td></tr>'; return; }
+  tbody.innerHTML = vagas.map(([id,v]) => {
+    const atribs = Object.values(v.atribuicoes||{}).length;
+    const total = (v.qtd['Ajudante Interno']||0)+(v.qtd['Ajudante Externo']||0)+(v.qtd['Conferente']||0);
+    const emps = v.empresasAlvo ? v.empresasAlvo.map(eid=>(STATE.empresas[eid]||{}).nome||eid).join(', ') : 'Todas';
+    return `<tr>
+      <td class="td-name">${v.opNome}</td>
+      <td>${formatDate(v.data)}</td>
+      <td>${v.hora||'—'}</td>
+      <td style="font-size:11px">AI:${v.qtd['Ajudante Interno']||0} AE:${v.qtd['Ajudante Externo']||0} CO:${v.qtd['Conferente']||0}</td>
+      <td style="font-size:11px">${emps}</td>
+      <td><span class="badge ${v.status==='aberta'?'badge-success':'badge-gray'}">${v.status}</span></td>
+      <td style="display:flex;gap:4px">
+        <span style="font-size:11px;color:var(--gray-400)">${atribs}/${total}</span>
+        <button class="btn btn-danger btn-sm" onclick="encerrarVaga('${id}')">Encerrar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===================== ACOMPANHAMENTO =====================
+function renderAcompanhamento() {
+  const container = document.getElementById('acomp-container');
+  if (!container) return;
+  const filterOp = document.getElementById('filter-op-acomp');
+  const filterOpVal = filterOp ? filterOp.value : '';
+
+  let items = Object.entries(STATE.acompanhamento);
+  if (filterOpVal) items = items.filter(([,a]) => a.vagaId && STATE.vagas[a.vagaId] && STATE.vagas[a.vagaId].opId === filterOpVal);
+  if (currentUser.role === 'empresa') items = items.filter(([,a]) => a.empresaId === currentUser.empresaId);
+
+  if (!items.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Nenhum registro de acompanhamento.</div></div>';
+    return;
+  }
+
+  // Agrupar por vagaId/data/op
+  const grupos = {};
+  items.forEach(([id, a]) => {
+    const key = (a.vagaId||'') + '_' + (a.data||'');
+    if (!grupos[key]) grupos[key] = { opNome: a.opNome, data: a.data, rows: [] };
+    grupos[key].rows.push([id, a]);
+  });
+
+  container.innerHTML = Object.values(grupos).map(g => `
+    <div class="acomp-card">
+      <div class="acomp-header">
+        <div class="acomp-op">⚡ ${g.opNome || '—'}</div>
+        <div class="acomp-meta">📅 ${formatDate(g.data)}</div>
+      </div>
+      <div class="table-wrap">
+        <table class="acomp-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Empresa</th>
+              <th>Função</th>
+              <th>Chegada</th>
+              <th>Refeição</th>
+              <th>Saída</th>
+              <th>H. Trabalhadas</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${g.rows.map(([id, a]) => renderAcompRow(id, a)).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAcompRow(id, a) {
+  const { hTrab, hTrabalhadasMin, previsaoSaida, valor, classe, displayH } = calcHoras(a);
+  const statusBadge = {
+    'Em escolha': 'badge-warning',
+    'Validada': 'badge-info',
+    'Presente': 'badge-success',
+    'Ausente': 'badge-danger',
+    'Encerrado': 'badge-gray'
+  }[a.status] || 'badge-gray';
+  const podeEditar = currentUser.role === 'admin' || a.empresaId === currentUser.empresaId;
+  return `<tr>
+    <td class="td-name">${a.colNome}</td>
+    <td style="font-size:12px">${a.empresaNome||'—'}</td>
+    <td><span class="badge badge-navy">${a.funcao||'—'}</span></td>
+    <td>${a.chegada||'—'}</td>
+    <td>${a.refeicao||'—'}</td>
+    <td>${a.saida||'—'}</td>
+    <td><span class="${classe}">${displayH}</span></td>
+    <td style="font-size:12px;font-weight:600">${valor}</td>
+    <td><span class="badge ${statusBadge}">${a.status||'Em escolha'}</span></td>
+    <td>${podeEditar ? `<button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>` : '—'}</td>
+  </tr>`;
+}
+
+function calcHoras(a) {
+  if (!a.chegada || !a.saida) return { hTrab: null, displayH: '—', classe: '', valor: '—' };
+  const chegMin = timeToMin(a.chegada);
+  const saidaMin = timeToMin(a.saida);
+  const refMin = timeToMin(a.refeicao || '01:00');
+  const totalMin = saidaMin - chegMin - refMin;
+  const joHorasMin = 8 * 60;
+  const heMin = Math.max(0, totalMin - joHorasMin);
+  const negMin = totalMin < joHorasMin ? joHorasMin - totalMin : 0;
+
+  const emp = currentUser.role === 'empresa' ? STATE.empresas[a.empresaId] : (STATE.empresas[a.empresaId] || {});
+  const valores = (emp.valores || {})[a.funcao] || {};
+  const valorDia = parseFloat(valores.valor) || 0;
+  const valorHE = parseFloat(valores.he) || 0;
+  let valorTotal = valorDia;
+  if (heMin > 0) valorTotal += (heMin / 60) * valorHE;
+  if (negMin > 0 && a.desconto === 'sim') valorTotal -= (negMin / 60) * valorHE;
+
+  let classe = '';
+  if (totalMin >= joHorasMin + 1) classe = 'horas-over';
+  else if (totalMin < joHorasMin) classe = 'horas-warn';
+  else classe = 'horas-ok';
+
+  const displayH = minToHM(totalMin) + (heMin > 0 ? ` (+${minToHM(heMin)})` : negMin > 0 ? ` (-${minToHM(negMin)})` : '');
+  const valorStr = valorTotal > 0 ? `R$ ${valorTotal.toFixed(2).replace('.',',')}` : '—';
+  return { displayH, classe, valor: valorStr };
+}
+
+function timeToMin(t) {
+  if (!t) return 0;
+  const [h,m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function minToHM(m) {
+  if (m < 0) m = Math.abs(m);
+  return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+function openAcompEdit(id) {
+  currentAcompId = id;
+  const a = STATE.acompanhamento[id];
+  document.getElementById('acomp-edit-title').textContent = 'Editar Ponto — ' + (a.colNome||'');
+  sv('ae-chegada', a.chegada||'');
+  sv('ae-refeicao', ['01:00','01:30','02:00'].includes(a.refeicao) ? a.refeicao : a.refeicao ? 'manual' : '01:00');
+  if (!['01:00','01:30','02:00'].includes(a.refeicao) && a.refeicao) {
+    sv('ae-ref-manual', a.refeicao);
+    document.getElementById('ae-ref-manual-wrap').style.display = 'block';
+  }
+  sv('ae-saida', a.saida||'');
+  sv('ae-desconto', a.desconto||'nao');
+  sv('ae-status', a.status||'Em escolha');
+  updateAcompPreview();
+  openModal('modal-acomp-edit');
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'ae-refeicao') {
+    document.getElementById('ae-ref-manual-wrap').style.display = e.target.value === 'manual' ? 'block' : 'none';
+  }
+  if (['ae-chegada','ae-refeicao','ae-saida','ae-ref-manual','ae-desconto'].includes(e.target.id)) updateAcompPreview();
+});
+document.addEventListener('input', e => {
+  if (['ae-chegada','ae-saida','ae-ref-manual'].includes(e.target.id)) updateAcompPreview();
+});
+
+function updateAcompPreview() {
+  const a = STATE.acompanhamento[currentAcompId] || {};
+  const chegada = v('ae-chegada');
+  const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
+  const saida = v('ae-saida');
+  const desconto = v('ae-desconto');
+  const mock = { ...a, chegada, refeicao: refVal, saida, desconto };
+  const { displayH, classe, valor } = calcHoras(mock);
+  if (!chegada) { document.getElementById('ae-preview').innerHTML = ''; return; }
+  const jornada = 8 * 60;
+  const totalMin = chegada && saida ? timeToMin(saida) - timeToMin(chegada) - timeToMin(refVal||'01:00') : null;
+  const prev = chegada && refVal ? minToHM(timeToMin(chegada) + jornada + timeToMin(refVal||'01:00')) : '—';
+  document.getElementById('ae-preview').innerHTML = `
+    <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+      <div><div style="color:var(--gray-400)">Previsão de Saída</div><div style="font-weight:600">${prev}</div></div>
+      <div><div style="color:var(--gray-400)">H. Trabalhadas</div><div class="${classe}" style="font-weight:600">${displayH||'—'}</div></div>
+      <div><div style="color:var(--gray-400)">Valor Est.</div><div style="font-weight:600">${valor}</div></div>
+    </div>`;
+}
+
+function saveAcompEdit() {
+  const refVal = v('ae-refeicao') === 'manual' ? v('ae-ref-manual') : v('ae-refeicao');
+  const data = {
+    chegada: v('ae-chegada'),
+    refeicao: refVal,
+    saida: v('ae-saida'),
+    desconto: v('ae-desconto'),
+    status: v('ae-status')
+  };
+  db.ref('acompanhamento/' + currentAcompId).update(data).then(() => {
+    toast('Ponto salvo!', 'success');
+    closeModal('modal-acomp-edit');
+  });
+}
+
+// ===================== UTILS =====================
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function n(id) { return parseFloat(v(id)) || 0; }
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  const t = document.createElement('div');
+  t.className = 'toast-msg ' + type;
+  t.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
+  el.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>
