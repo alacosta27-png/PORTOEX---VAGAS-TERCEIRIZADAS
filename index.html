@@ -1710,6 +1710,7 @@ function listenFirebase() {
     db.ref('notificacoes').on('value', snap => {
       STATE.notificacoes = snap.val() || {};
       updateNotifBadge();
+      renderSugestoesPendentes();
     });
   }
   const colPath = currentUser.role === 'empresa'
@@ -2787,72 +2788,130 @@ function atualizarFuncaoEdit() {
 }
 
 function renderSugestoesPendentes() {
-  // Coleta todos os registros com desacordo pendente
-  const pendentes = Object.entries(STATE.acompanhamento)
+  // Coleta desacordos de ponto pendentes
+  const pendentesDesacordo = Object.entries(STATE.acompanhamento)
     .filter(([,a]) => a.desacordo && a.desacordo.status === 'pendente')
     .sort(([,a],[,b]) => (b.desacordo?.enviadoEm||0) - (a.desacordo?.enviadoEm||0));
+
+  // Coleta notificações de indicação pendentes
+  const pendentesNotif = Object.entries(STATE.notificacoes || {})
+    .filter(([,n]) => n.status === 'pendente')
+    .sort(([,a],[,b]) => (b.enviadoEm||0) - (a.enviadoEm||0));
+
+  const total = pendentesDesacordo.length + pendentesNotif.length;
 
   // Atualizar botão do cabeçalho
   const btn = document.getElementById('btn-sugestoes-pendentes');
   const cnt = document.getElementById('sugestoes-count');
   if (btn) {
-    btn.style.display = pendentes.length > 0 && currentUser.role === 'admin' ? 'inline-flex' : 'none';
-    if (cnt) cnt.textContent = pendentes.length;
+    btn.style.display = total > 0 && currentUser?.role === 'admin' ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = total;
   }
 
-  // Renderizar lista no modal
   const lista = document.getElementById('sugestoes-lista');
   if (!lista) return;
 
-  if (!pendentes.length) {
-    lista.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma sugestão pendente.</div></div>';
+  if (!total) {
+    lista.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma pendência.</div></div>';
     return;
   }
 
-  lista.innerHTML = pendentes.map(([id, a]) => {
-    const d = a.desacordo;
-    // Calcular diferença entre atual e sugerido
-    const chegDif = d.chegada && a.chegada && d.chegada !== a.chegada;
-    const saidaDif = d.saida && a.saida && d.saida !== a.saida;
-    const refDif = d.refeicao && a.refeicao && d.refeicao !== a.refeicao;
-
-    const campo = (label, atual, sugerido, diferente) => `
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${label}</div>
-        <div style="font-size:13px;color:var(--gray-400);text-decoration:line-through">${atual||'—'}</div>
-        <div style="font-size:15px;font-weight:700;color:${diferente?'var(--warning)':'var(--gray-600)'}">${sugerido||'—'}</div>
-        ${diferente?'<div style="font-size:9px;color:var(--warning);font-weight:700">ALTERADO</div>':''}
-      </div>`;
-
-    return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:4px">${a.colNome||'—'}</div>
-          <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
-            <span>🏢 <strong>${d.empresaNome||a.empresaNome||'—'}</strong></span>
-            <span>📅 ${formatDate(a.data)}</span>
-            <span>⚙️ ${a.opNome||'—'}</span>
-            <span>👔 ${a.funcao||'—'}</span>
-          </div>
-          <div style="margin-top:8px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
-            <span style="color:var(--warning);font-weight:600">Motivo: </span>${d.motivo||'—'}
-          </div>
-          <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
-            Enviado em ${d.enviadoEm ? new Date(d.enviadoEm).toLocaleString('pt-BR') : '—'}
-          </div>
-        </div>
-        <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px 16px;display:flex;gap:20px;align-items:center;flex-shrink:0">
-          ${campo('Chegada', a.chegada, d.chegada, chegDif)}
-          ${campo('Refeição', a.refeicao, d.refeicao, refDif)}
-          ${campo('Saída', a.saida, d.saida, saidaDif)}
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
-        <button class="btn btn-ghost btn-sm" onclick="recusarSugestao('${id}')">✕ Recusar</button>
-        <button class="btn btn-success btn-sm" onclick="aceitarSugestao('${id}')">✓ Aceitar e aplicar</button>
-      </div>
+  // ---- Seção: Sugestões de correção de ponto ----
+  let htmlDesacordo = '';
+  if (pendentesDesacordo.length) {
+    htmlDesacordo = `<div style="padding:12px 20px;background:var(--warning-bg);font-size:11px;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:0.5px">
+      ⏱️ Sugestões de Correção de Ponto (${pendentesDesacordo.length})
     </div>`;
-  }).join('');
+    htmlDesacordo += pendentesDesacordo.map(([id, a]) => {
+      const d = a.desacordo;
+      const chegDif = d.chegada && a.chegada && d.chegada !== a.chegada;
+      const saidaDif = d.saida && a.saida && d.saida !== a.saida;
+      const refDif = d.refeicao && a.refeicao && d.refeicao !== a.refeicao;
+
+      const campo = (label, atual, sugerido, diferente) => `
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${label}</div>
+          <div style="font-size:12px;color:var(--gray-400);text-decoration:line-through">${atual||'—'}</div>
+          <div style="font-size:14px;font-weight:700;color:${diferente?'var(--warning)':'var(--gray-600)'}">${sugerido||'—'}</div>
+          ${diferente?'<div style="font-size:9px;color:var(--warning);font-weight:700">ALTERADO</div>':''}
+        </div>`;
+
+      return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:4px">${a.colNome||'—'}</div>
+            <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
+              <span>🏢 <strong>${d.empresaNome||a.empresaNome||'—'}</strong></span>
+              <span>📅 ${formatDate(a.data)}</span>
+              <span>⚙️ ${a.opNome||'—'}</span>
+              <span>👔 ${a.funcao||'—'}</span>
+            </div>
+            <div style="margin-top:8px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
+              <span style="color:var(--warning);font-weight:600">Motivo: </span>${d.motivo||'—'}
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
+              Enviado em ${d.enviadoEm ? new Date(d.enviadoEm).toLocaleString('pt-BR') : '—'}
+            </div>
+          </div>
+          <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px 16px;display:flex;gap:20px;align-items:center;flex-shrink:0">
+            ${campo('Chegada', a.chegada, d.chegada, chegDif)}
+            ${campo('Refeição', a.refeicao, d.refeicao, refDif)}
+            ${campo('Saída', a.saida, d.saida, saidaDif)}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="recusarSugestao('${id}')">✕ Recusar</button>
+          <button class="btn btn-success btn-sm" onclick="aceitarSugestao('${id}')">✓ Aceitar e aplicar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---- Seção: Solicitações de alteração de indicação ----
+  let htmlNotif = '';
+  if (pendentesNotif.length) {
+    htmlNotif = `<div style="padding:12px 20px;background:var(--info-bg);font-size:11px;font-weight:700;color:var(--info);text-transform:uppercase;letter-spacing:0.5px">
+      👥 Solicitações de Alteração de Indicação (${pendentesNotif.length})
+    </div>`;
+    htmlNotif += pendentesNotif.map(([nid, n]) => {
+      const acomp = STATE.acompanhamento[n.acompId] || {};
+      const tipoLabel = n.tipo === 'exclusao_indicacao' ? '🗑️ Excluir indicação' : '🔄 Alterar colaborador';
+      const tipoColor = n.tipo === 'exclusao_indicacao' ? 'var(--danger)' : 'var(--info)';
+      return `<div style="padding:16px 20px;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:700;color:${tipoColor}">${tipoLabel}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">${acomp.colNome||n.novoColNome||'—'}</div>
+            <div style="font-size:12px;color:var(--gray-400);display:flex;gap:12px;flex-wrap:wrap">
+              <span>🏢 <strong>${n.empresaNome||'—'}</strong></span>
+              <span>📅 ${formatDate(acomp.data)}</span>
+              <span>⚙️ ${acomp.opNome||'—'}</span>
+            </div>
+            ${n.novoColNome ? `<div style="margin-top:6px;font-size:12px;background:var(--info-bg);padding:6px 10px;border-radius:var(--radius)">
+              Novo colaborador solicitado: <strong>${n.novoColNome}</strong>
+            </div>` : ''}
+            <div style="margin-top:6px;background:var(--warning-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px">
+              <span style="color:var(--warning);font-weight:600">Motivo: </span>${n.motivo||'—'}
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:4px">
+              Enviado em ${n.enviadoEm ? new Date(n.enviadoEm).toLocaleString('pt-BR') : '—'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="recusarNotif('${nid}')">✕ Recusar</button>
+          ${n.tipo === 'exclusao_indicacao'
+            ? `<button class="btn btn-danger btn-sm" onclick="aceitarExclusaoIndicacao('${nid}','${n.acompId}')">✓ Confirmar exclusão</button>`
+            : `<button class="btn btn-success btn-sm" onclick="aceitarAlteracaoIndicacao('${nid}','${n.acompId}','${n.novoColId||''}','${n.novoColNome||''}')">✓ Confirmar alteração</button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  lista.innerHTML = htmlDesacordo + htmlNotif;
 }
 
 function aceitarSugestao(id) {
@@ -2871,6 +2930,33 @@ function aceitarSugestao(id) {
 function recusarSugestao(id) {
   db.ref(`acompanhamento/${id}/desacordo/status`).set('recusado').then(() => {
     toast('Sugestão recusada.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function recusarNotif(nid) {
+  db.ref(`notificacoes/${nid}/status`).set('recusado').then(() => {
+    toast('Solicitação recusada.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function aceitarExclusaoIndicacao(nid, acompId) {
+  db.ref('acompanhamento/' + acompId).remove().then(() => {
+    db.ref(`notificacoes/${nid}/status`).set('aceito');
+    toast('Indicação excluída com sucesso.', 'success');
+    renderSugestoesPendentes();
+  });
+}
+
+function aceitarAlteracaoIndicacao(nid, acompId, novoColId, novoColNome) {
+  const updates = { 'notificacoes/' + nid + '/status': 'aceito' };
+  if (novoColId && novoColId !== 'undefined') {
+    updates['acompanhamento/' + acompId + '/colId'] = novoColId;
+    updates['acompanhamento/' + acompId + '/colNome'] = novoColNome;
+  }
+  db.ref().update(updates).then(() => {
+    toast('Alteração de indicação aplicada!', 'success');
     renderSugestoesPendentes();
   });
 }
@@ -3636,12 +3722,23 @@ function confirmarZerar() {
 
 
 function updateNotifBadge() {
-  const pendentes = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
+  const pendentesNotif = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
+  const pendentesDesacordo = Object.values(STATE.acompanhamento || {}).filter(a => a.desacordo && a.desacordo.status === 'pendente').length;
+  const total = pendentesNotif + pendentesDesacordo;
+
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.dataset.page === 'page-acompanhamento') {
-      t.innerHTML = `Acompanhamento${pendentes > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${pendentes}</span>` : ''}`;
+      t.innerHTML = `Acompanhamento${total > 0 ? ` <span style="background:var(--danger);color:white;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">${total}</span>` : ''}`;
     }
   });
+
+  // Atualizar botão de sugestões
+  const btn = document.getElementById('btn-sugestoes-pendentes');
+  const cnt = document.getElementById('sugestoes-count');
+  if (btn && currentUser?.role === 'admin') {
+    btn.style.display = total > 0 ? 'inline-flex' : 'none';
+    if (cnt) cnt.textContent = total;
+  }
 }
 
 function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
