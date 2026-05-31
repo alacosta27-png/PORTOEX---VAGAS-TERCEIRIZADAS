@@ -2738,12 +2738,24 @@ function openAcompEdit(id) {
   const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim' || op.ativa == null);
 
   // Coletar operações únicas dos dados históricos que não estão no cadastro
-  const opsCadastradas = new Set(ops.map(([,op]) => op.nome.toUpperCase()));
+  const opsCadastradas = new Set(ops.map(([,op]) => op.nome.trim().toUpperCase()));
+
+  // Também incluir a operação atual do registro mesmo que não esteja em nenhum lugar
   const opsHistorico = {};
-  Object.values(STATE.acompanhamento).forEach(a => {
-    if (a.opNome && !opsCadastradas.has(a.opNome.toUpperCase())) {
-      const key = a.opNome.toUpperCase();
-      if (!opsHistorico[key]) opsHistorico[key] = { nome: a.opNome, cc: a.opCC||'', funcao: a.funcao||'' };
+  const fontes = [...Object.values(STATE.acompanhamento)];
+  // Garantir que a operação atual do registro esteja na lista
+  if (a.opNome) {
+    const key = a.opNome.trim().toUpperCase();
+    if (!opsCadastradas.has(key)) {
+      opsHistorico[key] = { nome: a.opNome.trim(), cc: a.opCC||'', funcao: a.funcao||'' };
+    }
+  }
+  fontes.forEach(rec => {
+    if (rec.opNome) {
+      const key = rec.opNome.trim().toUpperCase();
+      if (!opsCadastradas.has(key) && !opsHistorico[key]) {
+        opsHistorico[key] = { nome: rec.opNome.trim(), cc: rec.opCC||'', funcao: rec.funcao||'' };
+      }
     }
   });
 
@@ -2982,13 +2994,24 @@ function saveAcompEdit() {
   // Atualizar operação se foi alterada
   const novaOpId = v('ae-operacao');
   if (novaOpId) {
-    const sel = document.getElementById('ae-operacao');
-    const opt = sel.options[sel.selectedIndex];
+    // Operação com ID cadastrado no sistema
+    const selEl = document.getElementById('ae-operacao');
+    const opt = selEl.options[selEl.selectedIndex];
     const novaOp = STATE.operacoes[novaOpId] || {};
     data.opId = novaOpId;
     data.opNome = opt.dataset.nome || novaOp.nome || '';
     data.opCC = opt.dataset.cc || novaOp.cc || '';
     data.funcao = opt.dataset.funcao || novaOp.funcao || getFuncaoByOp(data.opNome);
+  } else {
+    // Verificar se escolheu uma opção histórica (id vazio mas nome diferente do atual)
+    const selEl = document.getElementById('ae-operacao');
+    const opt = selEl.options[selEl.selectedIndex];
+    const nomeEscolhido = opt?.dataset?.nome || '';
+    if (nomeEscolhido && nomeEscolhido !== (a.opNome||'')) {
+      data.opNome = nomeEscolhido;
+      data.opCC = opt.dataset.cc || '';
+      data.funcao = opt.dataset.funcao || getFuncaoByOp(nomeEscolhido);
+    }
   }
   const usaRota = novaOpId ? (data.opCC||'').toUpperCase() === 'ROTA' : isRota;
   if (usaRota) {
