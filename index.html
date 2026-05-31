@@ -2408,7 +2408,14 @@ function renderAcompanhamento() {
   const filterOpVal = document.getElementById('filter-op-acomp')?.value || '';
 
   let items = Object.entries(STATE.acompanhamento);
-  if (currentUser.role === 'empresa') items = items.filter(([,a]) => a.empresaId === currentUser.empresaId);
+  if (currentUser.role === 'empresa') {
+    const empId = currentUser.empresaId;
+    const empNome = (currentUser.empresaNome||'').trim().toUpperCase();
+    items = items.filter(([,a]) =>
+      a.empresaId === empId ||
+      (!a.empresaId && empNome && (a.empresaNome||'').trim().toUpperCase() === empNome)
+    );
+  }
   if (filterDataVal) items = items.filter(([,a]) => a.data === filterDataVal);
   if (filterOpVal) {
     const opNome = (STATE.operacoes[filterOpVal]||{}).nome;
@@ -2517,7 +2524,8 @@ function renderAcompRow(id, a, opCor) {
       <button class="btn btn-ghost btn-sm" onclick="openAcompEdit('${id}')">Editar</button>
       ${temDesacordoPendente ? `<button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning)" onclick="openAcompEdit('${id}')">⚠️ Ver desacordo</button>` : ''}
     </div>`;
-  } else if (a.empresaId === currentUser.empresaId) {
+  } else if (a.empresaId === currentUser.empresaId ||
+             (!a.empresaId && (a.empresaNome||'').trim().toUpperCase() === (currentUser.empresaNome||'').trim().toUpperCase())) {
     acoes = `<div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="openSugestao('${id}')">Sugerir alteração</button>
       <button class="btn btn-ghost btn-sm" onclick="openGerenciarIndicacao('${id}')">Indicação</button>
@@ -3423,7 +3431,13 @@ function previewZerar() {
   const empresa = v('zerar-empresa');
   let items = Object.entries(STATE.acompanhamento);
   if (data) items = items.filter(([,a]) => a.data === data);
-  if (empresa) items = items.filter(([,a]) => a.empresaId === empresa);
+  if (empresa) {
+    const empNomeFiltro = (STATE.empresas[empresa]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empresa ||
+      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
   const prev = document.getElementById('zerar-preview');
   prev.style.display = 'block';
   if (!items.length) {
@@ -3444,7 +3458,13 @@ function confirmarZerar() {
   const empresa = v('zerar-empresa');
   let items = Object.entries(STATE.acompanhamento);
   if (data) items = items.filter(([,a]) => a.data === data);
-  if (empresa) items = items.filter(([,a]) => a.empresaId === empresa);
+  if (empresa) {
+    const empNomeFiltro = (STATE.empresas[empresa]||{}).nome || '';
+    items = items.filter(([,a]) =>
+      a.empresaId === empresa ||
+      (!a.empresaId && empNomeFiltro && (a.empresaNome||'').trim().toUpperCase() === empNomeFiltro.trim().toUpperCase())
+    );
+  }
   if (!items.length) { toast('Nenhum registro encontrado.', 'error'); return; }
   if (!confirm(`Excluir ${items.length} registros de ponto? Esta ação não pode ser desfeita.`)) return;
   const updates = {};
