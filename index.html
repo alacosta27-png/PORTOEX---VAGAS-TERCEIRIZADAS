@@ -3152,6 +3152,7 @@ function confirmarZerar() {
 }
 
 
+function updateNotifBadge() {
   const pendentes = Object.values(STATE.notificacoes || {}).filter(n => n.status === 'pendente').length;
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.dataset.page === 'page-acompanhamento') {
