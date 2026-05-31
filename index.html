@@ -2733,11 +2733,28 @@ function openAcompEdit(id) {
   });
   updateAdicionalPreview();
 
-  // Popular select de operação
+  // Popular select de operação — inclui cadastradas + operações dos dados históricos
   const aeOp = document.getElementById('ae-operacao');
-  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim').sort(([,a],[,b]) => a.nome.localeCompare(b.nome));
-  aeOp.innerHTML = '<option value="">— Manter atual ('+( a.opNome||'?')+') —</option>' +
-    ops.map(([id,op]) => `<option value="${id}" data-nome="${op.nome}" data-cc="${op.cc}" data-funcao="${op.funcao||''}">${op.nome} — ${op.cc}</option>`).join('');
+  const ops = Object.entries(STATE.operacoes).filter(([,op]) => op.ativa === 'sim' || op.ativa == null);
+
+  // Coletar operações únicas dos dados históricos que não estão no cadastro
+  const opsCadastradas = new Set(ops.map(([,op]) => op.nome.toUpperCase()));
+  const opsHistorico = {};
+  Object.values(STATE.acompanhamento).forEach(a => {
+    if (a.opNome && !opsCadastradas.has(a.opNome.toUpperCase())) {
+      const key = a.opNome.toUpperCase();
+      if (!opsHistorico[key]) opsHistorico[key] = { nome: a.opNome, cc: a.opCC||'', funcao: a.funcao||'' };
+    }
+  });
+
+  // Juntar tudo e ordenar alfabeticamente
+  const todasOps = [
+    ...ops.map(([id,op]) => ({ id, nome: op.nome, cc: op.cc, funcao: op.funcao||'' })),
+    ...Object.values(opsHistorico).map(op => ({ id: '', nome: op.nome, cc: op.cc, funcao: op.funcao }))
+  ].sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  aeOp.innerHTML = '<option value="">— Manter atual (' + (a.opNome||'?') + ') —</option>' +
+    todasOps.map(op => `<option value="${op.id}" data-nome="${op.nome}" data-cc="${op.cc}" data-funcao="${op.funcao}">${op.nome} — ${op.cc}</option>`).join('');
   aeOp.value = '';
 
   // Campos de ROTA
