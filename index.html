@@ -1637,8 +1637,7 @@ function switchInner(group, tab) {
 
 // ===================== FIREBASE LISTENERS =====================
 function listenFirebase() {
-// Atualiza seleções quando empresas carregarem
-db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects(); });
+  db.ref('empresas').on('value', snap => { STATE.empresas = snap.val() || {}; renderEmpresas(); populateVagaEmpresasCheck(); populateResumoSelects(); });
   db.ref('operacoes').on('value', snap => { STATE.operacoes = snap.val() || {}; renderOperacoes(); populateOpSelects(); });
   db.ref('vagas').on('value', snap => { STATE.vagas = snap.val() || {}; renderMural(); renderVagasAdmin(); });
   db.ref('motoristas').on('value', snap => { STATE.motoristas = snap.val() || {}; renderMotoristas(); populateMotoristaSelect(); });
